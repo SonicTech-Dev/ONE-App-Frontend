@@ -10,8 +10,13 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-community/slider": "^4.5.7",
     "react": "18.3.1",
-    "react-native": "0.76.0"
+    "react-native": "0.76.0",
+    "react-native-pager-view": "^6.8.1",
+    "react-native-tab-view": "^4.1.2",
+    "react-native-vector-icons": "^10.3.0",
+    "react-native-vlc-rtsp": "^1.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
