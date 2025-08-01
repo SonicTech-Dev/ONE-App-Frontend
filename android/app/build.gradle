@@ -104,6 +104,8 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -120,6 +122,10 @@ android {
     packaging {
         resources {
             excludes += ['META-INF/native-image/**']
+        }
+        jniLibs {
+            useLegacyPackaging true
+            keepDebugSymbols += ['**/libnfc_akuvox.so']
         }
     }
 }
