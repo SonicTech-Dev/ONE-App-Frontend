@@ -1,16 +1,13 @@
 import React from 'react';
-import { View, Dimensions } from 'react-native';
+import { View } from 'react-native';
 import { VlcSimplePlayer } from 'react-native-vlc-rtsp';
 
-const { width } = Dimensions.get('window');
-const SQUARE_SIZE = width;
-
 const RTSPViewer = ({ uri }) => (
-  <View style={{ width: SQUARE_SIZE, height: SQUARE_SIZE }}>
+  <View style={{ flex: 1, backgroundColor: 'black' }}>
     <VlcSimplePlayer
       autoplay={true}
-      style={{ width: '100%', height: '100%' }} // Add height!
-      url={uri} // <- FIXED
+      style={{ flex: 1 }}
+      url={uri}
       autoAspectRatio={false}
       onStartFullScreen={() => null}
       onCloseFullScreen={() => null}
