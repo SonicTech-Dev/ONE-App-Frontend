@@ -113,6 +113,15 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    packaging {
+        resources {
+            excludes += ['META-INF/native-image/**']
+        }
+    }
 }
 
 
@@ -122,6 +131,8 @@ dependencies {
     implementation (files("libs/aknbsdk.aar"))
     implementation (files("libs/belahomesdk.aar"))
     implementation 'com.google.code.gson:gson:2.10.1'  // or the latest
+    implementation 'org.bytedeco:javacv-platform:1.5.9' // includes FFmpeg + OpenCV
+    implementation 'com.google.mlkit:text-recognition:16.0.0-beta5' // ML Kit OCR
 
 
     if (hermesEnabled.toBoolean()) {
