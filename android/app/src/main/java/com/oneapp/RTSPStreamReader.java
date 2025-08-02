@@ -1,10 +1,24 @@
+package com.oneapp;
+
+import java.io.File;
+import android.content.Context;
+import android.os.Environment;
+import android.util.Log;
+
 import org.bytedeco.javacv.*;
 import org.bytedeco.opencv.opencv_core.Mat;
+
 import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
 
 public class RTSPStreamReader {
 
-    private static final String RTSP_URL = "rtsp://username:password@ip_address:port/stream";
+    private static final String RTSP_URL = "rtsp://admin:Sonic123@192.168.1.205:554/";
+    private final Context context;
+
+    // Constructor to receive context
+    public RTSPStreamReader(Context context) {
+        this.context = context.getApplicationContext();
+    }
 
     public void startStream() {
         new Thread(() -> {
@@ -15,11 +29,16 @@ public class RTSPStreamReader {
                 OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
                 Frame frame;
 
+                Log.d("RTSPStreamReader", "Streaming started");
+
                 while ((frame = grabber.grab()) != null) {
+                    Log.d("RTSPStreamReader", "Frame received at: " + System.currentTimeMillis());
                     Mat mat = converter.convert(frame);
                     if (mat != null) {
-                        // 👉 Call OCR processing here
+                        Log.d("RTSPStreamReader", "Mat converted, processing...");
                         processFrame(mat);
+                    } else {
+                        Log.w("RTSPStreamReader", "Null frame skipped");
                     }
                 }
 
@@ -31,11 +50,17 @@ public class RTSPStreamReader {
     }
 
     private void processFrame(Mat mat) {
-        // Save frame for now just to check if it's working
-        String filename = "/sdcard/rtsp_frame.jpg";
-        imwrite(filename, mat);
-        System.out.println("Frame saved to " + filename);
+        try {
+            File dir = new File(context.getExternalFilesDir(null), "RTSPFrames");
+            if (!dir.exists()) dir.mkdirs();
 
-        // TODO: Pass this frame to ML Kit OCR (next step)
+            String filename = new File(dir, "rtsp_frame_" + System.currentTimeMillis() + ".jpg").getAbsolutePath();
+            imwrite(filename, mat);
+
+            Log.d("RTSPStreamReader", "Frame saved to: " + filename);
+            Log.d("RTSPStreamReader", "OCR method called at: " + System.currentTimeMillis());
+        } catch (Exception e) {
+            Log.e("RTSPStreamReader", "Error saving frame: " + e.getMessage());
+        }
     }
 }
