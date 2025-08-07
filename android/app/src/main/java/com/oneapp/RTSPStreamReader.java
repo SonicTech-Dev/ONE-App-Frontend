@@ -20,7 +20,6 @@ public class RTSPStreamReader {
 
     private static final String RTSP_URL = "rtsp://admin:Sonic123@192.168.1.205:554/";
     private final ReactContext reactContext;
-    // --- Add variables for throttling and duplicate filtering ---
     private long lastOcrTime = 0;
     private static final long OCR_INTERVAL_MS = 700; // process 1.4 frames/sec
     private String lastRecognizedText = "";
@@ -85,32 +84,7 @@ public class RTSPStreamReader {
 
     private void processFrame(Mat mat) {
         try {
-            int width = mat.cols();
-            int height = mat.rows();
-
-            // === ROI: match your overlay exactly; center it for now ===
-            double ROI_WIDTH_PERCENT = 0.5;
-            double ROI_HEIGHT_PERCENT = 0.5;
-
-            int roiWidth = (int) (width * ROI_WIDTH_PERCENT);
-            int roiHeight = (int) (height * ROI_HEIGHT_PERCENT);
-            int roiX = (width - roiWidth) / 2;
-            int roiY = (height - roiHeight) / 2;
-
-            // Clamp to ensure ROI is inside image bounds
-            if (roiWidth <= 0 || roiHeight <= 0 || roiX < 0 || roiY < 0 
-                || roiX + roiWidth > width || roiY + roiHeight > height) {
-                Log.e("RTSPStreamReader", "Invalid ROI: x=" + roiX + ", y=" + roiY + ", w=" + roiWidth + ", h=" + roiHeight);
-                return;
-            } else {
-                Log.d("RTSPStreamReader", "ROI: x=" + roiX + ", y=" + roiY + ", w=" + roiWidth + ", h=" + roiHeight);
-            }
-
-            org.bytedeco.opencv.opencv_core.Rect roiRect =
-                new org.bytedeco.opencv.opencv_core.Rect(roiX, roiY, roiWidth, roiHeight);
-            Mat roiMat = new Mat(mat, roiRect);
-
-            Bitmap bitmap = matToBitmap(roiMat);
+            Bitmap bitmap = matToBitmap(mat); // Use full frame
             Log.d("RTSPStreamReader", "Bitmap size: " + bitmap.getWidth() + "x" + bitmap.getHeight());
 
             InputImage image = InputImage.fromBitmap(bitmap, 0);
@@ -119,11 +93,10 @@ public class RTSPStreamReader {
             recognizer.process(image)
                 .addOnSuccessListener(text -> {
                     String recognizedText = text.getText();
-                    Log.d("RTSPStreamReader", "OCR Text: " + recognizedText);
-
-                    if (recognizedText != null && !recognizedText.trim().isEmpty() && !recognizedText.equals(lastRecognizedText)) {
-                        lastRecognizedText = recognizedText;
-                        sendToReactNative(recognizedText);
+                    String digitsOnly = recognizedText.replaceAll("[^0-9]", "");
+                    if (!digitsOnly.isEmpty() && !digitsOnly.equals(lastRecognizedText)) {
+                        lastRecognizedText = digitsOnly;
+                        sendToReactNative(digitsOnly);
                     }
                 })
                 .addOnFailureListener(e -> {

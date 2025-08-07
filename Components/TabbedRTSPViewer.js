@@ -8,8 +8,8 @@ const TEST_RTSP_URL = 'rtsp://admin:Sonic123@192.168.1.205:554/';
 const { RTSPModule } = NativeModules;
 const eventEmitter = new NativeEventEmitter(RTSPModule);
 
-const ROI_WIDTH_PERCENT = 0.5;
-const ROI_HEIGHT_PERCENT = 0.5;
+const ROI_WIDTH_PERCENT = 1;
+const ROI_HEIGHT_PERCENT = 1;
 
 const TabbedRTSPViewer = ({ navigation }) => {
   const [ocrText, setOcrText] = useState('');
@@ -20,8 +20,8 @@ const TabbedRTSPViewer = ({ navigation }) => {
 
   const roiWidth = videoWidth * ROI_WIDTH_PERCENT;
   const roiHeight = videoHeight * ROI_HEIGHT_PERCENT;
-  const roiX = (videoWidth - roiWidth) / 1.8;
-  const roiY = (videoHeight - roiHeight) / 1.7;
+  const roiX = (videoWidth - roiWidth) / 2;
+  const roiY = (videoHeight - roiHeight) / 2;
 
   useEffect(() => {
     RTSPModule.startStream();
