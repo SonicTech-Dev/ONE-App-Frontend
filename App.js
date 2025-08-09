@@ -10,8 +10,16 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="RTSP Test" component={TabbedRTSPViewer} />
-        <Stack.Screen name="FullScreenRTSP" component={FullScreenRTSP} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="RTSP Test"
+          component={TabbedRTSPViewer}
+          options={{ headerShown: false }} // <--- Hide header here!
+        />
+        <Stack.Screen
+          name="FullScreenRTSP"
+          component={FullScreenRTSP}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

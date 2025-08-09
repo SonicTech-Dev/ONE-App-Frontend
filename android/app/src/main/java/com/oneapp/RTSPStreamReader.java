@@ -93,7 +93,7 @@ public class RTSPStreamReader {
             recognizer.process(image)
                 .addOnSuccessListener(text -> {
                     String recognizedText = text.getText();
-                    String digitsOnly = recognizedText.replaceAll("[^0-9]", "");
+                    String digitsOnly = recognizedText.replaceAll("[^0-9.]", "");
                     if (!digitsOnly.isEmpty() && !digitsOnly.equals(lastRecognizedText)) {
                         lastRecognizedText = digitsOnly;
                         sendToReactNative(digitsOnly);
