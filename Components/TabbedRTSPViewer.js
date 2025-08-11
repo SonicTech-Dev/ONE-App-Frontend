@@ -12,7 +12,7 @@ import {
 import RTSPViewer from './RTSPViewer';
 import { NativeModules, NativeEventEmitter } from 'react-native';
 
-const TEST_RTSP_URL = 'rtsp://admin:Sonic123@192.168.1.205:554/';
+const TEST_RTSP_URL = 'rtsp://admin:Sonic123@192.168.1.208:554/cam/realmonitor?channel=1&subtype=0';
 
 const { RTSPModule } = NativeModules;
 const eventEmitter = new NativeEventEmitter(RTSPModule);
