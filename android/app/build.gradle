@@ -139,7 +139,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'  // or the latest
     implementation 'org.bytedeco:javacv-platform:1.5.9' // includes FFmpeg + OpenCV
     implementation 'com.google.mlkit:text-recognition:16.0.0-beta5' // ML Kit OCR
-
+    implementation 'com.github.rmtheis:tess-two:9.1.0'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
