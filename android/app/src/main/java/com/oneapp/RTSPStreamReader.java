@@ -22,18 +22,19 @@ import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.Text;
 
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 public class RTSPStreamReader {
     private final String streamId;
     private final String rtspUrl;
     private final ReactContext reactContext;
     private long lastOcrTime = 0;
-    private static final long OCR_INTERVAL_MS = 400; // Faster throttle
+    // Try more aggressive throttling for speed (adjust as needed)
+    private static final long OCR_INTERVAL_MS = 600;
     private String lastRecognizedText = "";
     private boolean running = false;
 
@@ -89,7 +90,7 @@ public class RTSPStreamReader {
         return bmpGrayscale;
     }
 
-    // Optional: downscale for speed
+    // Optional: downscale for speed (now more aggressive for performance)
     private Bitmap downscale(Bitmap src, int maxWidth) {
         if (src.getWidth() > maxWidth) {
             int scaledHeight = (int) (src.getHeight() * ((float)maxWidth / src.getWidth()));
@@ -162,8 +163,8 @@ public class RTSPStreamReader {
             saveDebugBitmap(reactContext, roiBitmap);
             // Step 3: Optional - grayscale
             Bitmap processedBitmap = toGrayscale(roiBitmap);
-            // Step 4: Optional - downscale for speed (e.g., max 320 px width)
-            processedBitmap = downscale(processedBitmap, 320);
+            // Step 4: Optional - downscale for speed (e.g., max 160 px width for more speed)
+            processedBitmap = downscale(processedBitmap, 160);
 
             // Step 5: Run ML Kit OCR (on-device)
             InputImage image = InputImage.fromBitmap(processedBitmap, 0);
