@@ -1,6 +1,5 @@
 import React from "react";
-import { Platform, StatusBar } from "react-native";
-import { StyleSheet, SafeAreaView, View,Platform } from "react-native";
+import { Platform, StatusBar, StyleSheet, SafeAreaView, View } from "react-native";
 import useColors from '../hooks/useColors'; // Adjust the path to where you saved useColors.js
 
 

@@ -24,8 +24,6 @@ import UploadScreen from "../../screens/UploadScreen";
 import { BlurView } from '@react-native-community/blur';
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
-import Swipeable from "react-native-gesture-handler/Swipeable";
-
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const initialNotifications = [

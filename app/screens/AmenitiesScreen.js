@@ -2,7 +2,9 @@ import React, {useRef, useCallback, useState} from 'react';
 import { ScrollView, View, SafeAreaView, StyleSheet, Animated } from 'react-native';
 import Tile from '../components/Discover/Tile'
 import Screen from '../components/Screen'
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import useColors from '../hooks/useColors';
 
 export default function AmenitiesScreen() {

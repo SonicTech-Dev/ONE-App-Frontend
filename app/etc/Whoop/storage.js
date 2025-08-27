@@ -1,4 +1,3 @@
-import * as SecureStore from "expo-secure-store";
 import SecureKeyStore from "react-native-secure-key-store";
 
 const key = "whoopAccessToken";
