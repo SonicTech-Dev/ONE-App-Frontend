@@ -8,8 +8,7 @@ import {
   Image,
   ImageBackground,
 } from 'react-native';
-import RTSPViewer from './RTSPViewer';
-import RoiOverlay from './RoiOverlay';
+
 import { NativeModules, NativeEventEmitter } from 'react-native';
 
 const CAMERA_STREAMS = [
@@ -103,15 +102,6 @@ const TabbedRTSPViewer = ({ navigation }) => {
             <View key={stream.id} style={styles.cameraBox}>
               <Text style={styles.camLabel}>Camera {stream.id.toUpperCase()}</Text>
               <View style={styles.videoContainer}>
-                <RTSPViewer
-                  uri={stream.url}
-                  style={{ width: videoWidth, height: videoHeight, borderRadius: 18 }}
-                />
-                <RoiOverlay
-                  videoWidth={videoWidth}
-                  videoHeight={videoHeight}
-                  roiRatio={ROI_RATIO}
-                />
               </View>
               <View style={styles.readingBlock}>
                 <View style={styles.ocrBox}>
