@@ -11,6 +11,7 @@ import com.akuvox.mobile.libcommon.params.SurfaceViewsParams;
 import com.akuvox.mobile.libcommon.bean.CallDataBean;
 import com.akuvox.mobile.libcommon.bean.MakeCallBean;
 import com.akuvox.mobile.libcommon.exp.ISipMessageListener;
+import com.akuvox.mobile.libcommon.wrapper.struct.MonitorDataWrap;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -79,6 +80,18 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 public int sipMessageRegStatus(int status) {
                     // The account registration status
                     Log.d("SIP", "Registration status: " + status);
+                    return 0;
+                }
+
+                    @Override
+                public int rtspMessageAudioIntercom(int var1, int var2, MonitorDataWrap var3) {
+                    // stub
+                    return 0;
+                }
+
+                @Override
+                public int rtspMessageMonitorLoadSurfaceView(int var1, SurfaceViewsParams var2) {
+                    // stub
                     return 0;
                 }
 

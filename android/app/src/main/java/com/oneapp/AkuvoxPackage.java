@@ -15,7 +15,6 @@ public class AkuvoxPackage implements ReactPackage {
     public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
         List<NativeModule> modules = new ArrayList<>();
         modules.add(new AkuvoxModule(reactContext));
-        modules.add(new RTSPModule(reactContext));
         return modules;
     }
 
