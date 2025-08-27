@@ -2,8 +2,7 @@ import React from 'react';
 import { View, Text, Switch, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
-import { FontAwesome6 } from 'react-native-vector-icons';
+import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const DeviceTile = ({
