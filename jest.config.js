@@ -4,7 +4,6 @@ module.exports = {
     'node_modules/(?!(react-native' +
       '|@react-native' +
       '|react-native-gesture-handler' +
-      '|react-native-reanimated' +
       '|@react-navigation' +
       '|react-native-vector-icons' +
       ')/)'
