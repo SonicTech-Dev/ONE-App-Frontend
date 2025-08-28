@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useState , useEffect} from 'react';
-import { ScrollView, View, SafeAreaView, StyleSheet, Animated, Alert } from 'react-native';
+import { Button, ScrollView, View, SafeAreaView, StyleSheet, Animated, Alert } from 'react-native';
 import Header from '../components/Smart/Header';
 import StatsSection from '../components/Smart/StatsSection';
 import Tabs from '../components/Smart/Tabs';
@@ -595,7 +595,7 @@ const INITIAL_DEVICE_CATEGORIES = [
 ];
 
 
-export default function SmartScreen() {
+export default function SmartScreen({ navigation }) {
   const [selectedOption, setSelectedOption] = useState('WAN');
   const [deviceCategories, setDeviceCategories] = useState(INITIAL_DEVICE_CATEGORIES);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -945,6 +945,15 @@ const handleSetBrightnes = (device, Brightness) => {
 
   return (
     <Screen>
+      {/* SDK Usage Tab Button */}
+      <View style={{ padding: 16, backgroundColor: '#fff', alignItems: 'center', flexDirection: 'row', justifyContent: 'flex-end' }}>
+        <Button
+          title="SDK Test"
+          onPress={() => navigation.navigate('SdkTest')}
+          color="#4ac0ff"
+        />
+      </View>
+
       <Animated.View
         style={[
           styles.headerContainer,
