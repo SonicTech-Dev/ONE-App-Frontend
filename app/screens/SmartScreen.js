@@ -945,14 +945,6 @@ const handleSetBrightnes = (device, Brightness) => {
 
   return (
     <Screen>
-      {/* SDK Usage Tab Button */}
-      <View style={{ padding: 16, backgroundColor: '#fff', alignItems: 'center', flexDirection: 'row', justifyContent: 'flex-end' }}>
-        <Button
-          title="SDK Test"
-          onPress={() => navigation.navigate('SdkTest')}
-          color="#4ac0ff"
-        />
-      </View>
 
       <Animated.View
         style={[
@@ -985,6 +977,22 @@ const handleSetBrightnes = (device, Brightness) => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
+        {/* SDK Test Tile */}
+        <View style={styles.sdkTestTileRow}>
+          <DeviceTile
+            title="SDK Test"
+            location="Navigate to SDK Test page"
+            status=""
+            color="#4ac0ff"
+            isOn={false} // or true, as needed
+            iconName="test-tube"
+            library="MaterialCommunityIcons"
+            onPress={() => navigation.navigate('SdkTest')}
+            disabled={false}
+          />
+        </View>
+        
+        {/* Your device rows */}
         {filteredDevices
           .reduce((result, device, index) => {
             if (index % 2 === 0) {
@@ -997,33 +1005,30 @@ const handleSetBrightnes = (device, Brightness) => {
           .map((row, rowIndex) => (
             <View key={rowIndex} style={styles.deviceRow}>
               {row.map((device, index) => {
-                  const mode = selectedOption.toLowerCase();
-                  const canControl = !!device[mode] && !!device[mode].commandPair;
-                  return (
-                    <DeviceTile
-                      key={index}
-                      title={device.title}
-                      location={device.location}
-                      status={device.status}
-                      color={device.color}
-                      isOn={device.isOn}
-                      iconName={device.iconName}
-                      library={device.library}
-                      onToggle={canControl ? (newControl) => handleToggle(device, newControl) : undefined}
-                      disabled={!canControl}
-                      commandPair={device[mode]?.commandPair}
-                      onPress={() => {
-                        setSelectedDevice(device);
-                        setModalVisible(true);
-                      }}
-                    />
-                  );
-                })}
+                const mode = selectedOption.toLowerCase();
+                const canControl = !!device[mode] && !!device[mode].commandPair;
+                return (
+                  <DeviceTile
+                    key={index}
+                    title={device.title}
+                    location={device.location}
+                    status={device.status}
+                    color={device.color}
+                    isOn={device.isOn}
+                    iconName={device.iconName}
+                    library={device.library}
+                    onToggle={canControl ? (newControl) => handleToggle(device, newControl) : undefined}
+                    disabled={!canControl}
+                    commandPair={device[mode]?.commandPair}
+                    onPress={() => {
+                      setSelectedDevice(device);
+                      setModalVisible(true);
+                    }}
+                  />
+                );
+              })}
             </View>
-
-
           ))}
-
       </ScrollView>
         <DevicModal
           selectedDevice={selectedDevice}
@@ -1036,6 +1041,7 @@ const handleSetBrightnes = (device, Brightness) => {
           handleSetFanSpeed={handleSetFanSpeed}
           handleSetBrightness={handleSetBrightnes}
           deviceStatus={selectedDeviceStatus}
+          style={styles.sdkTestTile}
         />
       
     </Screen>
@@ -1066,4 +1072,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16,
   },
+    sdkTestTileRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  sdkTestTile: {
+    flex: 1,
+    // width: '100%', // optional
+    minWidth: 0,
+    maxWidth: '100%',
+  }
 })

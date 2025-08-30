@@ -16,7 +16,7 @@ export default function SdkUsageScreen() {
     try {
       const result = await Akuvox.registerSip(
         "q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9ydX3MDyvYiKsuodonqmKjAg3PpmfEezF76tQNBNbDBztjSHe+Nkz8Yb01jkqtln2qdX8FKQyk/Rzza1ZYAjJzS6DBgcGhLNpwPz7jrjOF1v",
-        "fayis@sonictech.ae"
+        "User bela"
       );
       Alert.alert('Result', result);
     } catch (error) {

@@ -31,6 +31,15 @@ const colors = useColors();
   tabBarShowLabel: false,  //to remove labels from tab bar
   tabBarHideOnKeyboard:true,
   headerShown:false,
+    tabBarStyle: {
+      position: 'absolute',
+      height: 70, // or desired value
+      paddingBottom: 0, // remove extra padding
+      paddingTop: 0,
+      backgroundColor: '#fff', // your color
+      borderTopWidth: 0, // removes shadow/border
+      elevation: 0,       // removes shadow on Android
+    },
 }}
     initialRouteName={"HomeScreen"}
     >
@@ -74,7 +83,7 @@ const colors = useColors();
           tabBarIcon: ({ size, color,focused }) => (
     <Feather
       name="smartphone"
-      size={36}
+      size={30}
       color={focused?colors.primary:'#969696'}
     />            
             ),

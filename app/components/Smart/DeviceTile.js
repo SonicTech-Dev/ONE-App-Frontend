@@ -17,6 +17,7 @@ const DeviceTile = ({
   commandPair,
   onPress,
   disabled,
+  style,
 }) => {
   const handleToggle = () => {
     if (onToggle) {
@@ -34,7 +35,7 @@ const DeviceTile = ({
   const isSensor = title.toLowerCase().includes("sensor") || title.toLowerCase().includes("detector");
 
   return (
-    <Wrapper style={[styles.tileContainer, { backgroundColor: color }]} {...wrapperProps}>
+    <Wrapper style={[styles.tileContainer, style, { backgroundColor: color }]} {...wrapperProps}>
       <View style={styles.iconContainer}>
         {iconName && library === 'Ionicons' && (
           <Ionicons name={iconName} size={32} color="#ffffff" />
