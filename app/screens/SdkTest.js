@@ -35,7 +35,7 @@ export default function SdkUsageScreen() {
   };
 
   const handleMakeCall = () => {
-    Akuvox.makeCall("remoteUserName", "remoteDisplayName", 0);
+    Akuvox.makeCall("1192101702", "User bela", 0);
     Alert.alert('Making Call');
   };
 
