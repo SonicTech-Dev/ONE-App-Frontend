@@ -35,7 +35,7 @@ export default function SdkUsageScreen() {
   };
 
   const handleMakeCall = () => {
-    Akuvox.makeCall("1192101702", "User bela", 0);
+    Akuvox.makeCall("1192101703", "Hypanel supreme", 1);
     Alert.alert('Making Call');
   };
 

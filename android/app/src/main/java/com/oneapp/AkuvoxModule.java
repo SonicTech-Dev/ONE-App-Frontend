@@ -12,6 +12,7 @@ import com.akuvox.mobile.libcommon.bean.CallDataBean;
 import com.akuvox.mobile.libcommon.bean.MakeCallBean;
 import com.akuvox.mobile.libcommon.exp.ISipMessageListener;
 import com.akuvox.mobile.libcommon.wrapper.struct.MonitorDataWrap;
+import com.akuvox.mobile.libcommon.bean.SipTransTypeEnum;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -104,6 +105,9 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void registerSip(String ciphertext, String displayName, Promise promise) {
         try {
+
+        MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_TLS);
+
         int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
 
             if (result == 0) {
