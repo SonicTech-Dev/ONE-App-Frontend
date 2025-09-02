@@ -110,6 +110,8 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
 
         int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
 
+        MediaManager.getInstance(reactContext).setSipBackendOnline(true);
+        
             if (result == 0) {
                 promise.resolve("SIP account registered successfully.");
             } else {

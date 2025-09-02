@@ -16,8 +16,8 @@ export default function DeviceGrid({
       {/* SDK Test Tile */}
       <View style={styles.sdkTestTileRow}>
         <DeviceTile
-          title="SDK Test"
-          location="Navigate to SDK Test page"
+          title="Contacts"
+          location="Contact Page"
           status=""
           color="#4ac0ff"
           isOn={false}

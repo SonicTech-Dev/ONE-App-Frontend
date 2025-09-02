@@ -1,12 +1,120 @@
 import React, { useState } from 'react';
-import { View, Text, Button, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  Button,
+  Alert,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  Modal,
+} from 'react-native';
 import { NativeModules } from 'react-native';
 
 const { Akuvox } = NativeModules;
 
-export default function SdkUsageScreen() {
-  const [sipStatus, setSipStatus] = useState(null);
+// Sample data structure from your API
+const apiResult = {
+  family_name: 'One-Dev Mockup-Flat',
+  sip_group: '1191000500',
+  devices: [
+    {
+      device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7',
+      device_name: 'HyPanel Supreme',
+      mac: '0C110500755C',
+      sip: '1192101703',
+    },
+    {
+      device_id: 'd9a69e144b34c47ea822169672c0fd40d',
+      device_name: 'Hypanel KeyPlus new',
+      mac: '0C110527CAAC',
+      sip: '1192101704',
+    },
+    {
+      device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba',
+      device_name: 'Hypanel Lux',
+      mac: '0C11052BF1CF',
+      sip: '1192101705',
+    },
+    {
+      device_id: 'd7ed72241e59342d29daffc0911503029',
+      device_name: 'Hypanel KeyPlus27CA8F',
+      mac: '0C110527CA8F',
+      sip: '1192101723',
+    },
+  ],
+  accounts: [
+    {
+      account_id: 'a9b41de81c3284515a5e833d53412fe14',
+      sip: '1192101702',
+      account_name: 'fayis@sonictech.ae',
+      first_name: 'User',
+      last_name: 'Bela',
+      email: 'fayis@sonictech.ae',
+      main_sip: '1192101504',
+    },
+    {
+      account_id: 'a26325098299c4090b7db6117cc0d623f',
+      sip: '1192101706',
+      account_name: 'mahmoudsalah11350@gmail.com',
+      first_name: 'Mahmoud',
+      last_name: 'Salah',
+      email: 'mahmoudsalah11350@gmail.com',
+      main_sip: '1467100107',
+    },
+  ],
+  akuvox_devices: [
+    {
+      mac: '0C11052C6E92',
+      device_name: 'Intercom',
+      sip: '1192101722',
+    },
+  ],
+};
 
+const getContacts = () => {
+  // Merge all devices/accounts/akuvox_devices into a unified contact list
+  const contacts = [];
+
+  apiResult.devices.forEach((device) => {
+    contacts.push({
+      id: device.device_id,
+      name: device.device_name,
+      sip: device.sip,
+      type: 'Device',
+    });
+  });
+
+  apiResult.accounts.forEach((account) => {
+    contacts.push({
+      id: account.account_id,
+      name: `${account.first_name} ${account.last_name}`,
+      sip: account.sip,
+      type: 'Account',
+    });
+  });
+
+  apiResult.akuvox_devices.forEach((dev, idx) => {
+    contacts.push({
+      id: `akuvox_${idx}`,
+      name: dev.device_name,
+      sip: dev.sip,
+      type: 'Akuvox Device',
+    });
+  });
+
+  return contacts;
+};
+
+export default function SdkContactScreen() {
+  const [sipStatus, setSipStatus] = useState(null);
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const contacts = getContacts();
+
+  // SDK Actions
   const handleInitSdk = () => {
     Akuvox.initSdk();
     Alert.alert('SDK Initialized');
@@ -34,19 +142,168 @@ export default function SdkUsageScreen() {
     }
   };
 
-  const handleMakeCall = () => {
-    Akuvox.makeCall("1192101703", "Hypanel supreme", 1);
-    Alert.alert('Making Call');
+  // Contact Call Actions
+  const handleMakeAudioCall = (contact) => {
+    Akuvox.makeCall(contact.sip, contact.name, 1);
+    setModalVisible(false);
+    Alert.alert('Making Audio Call', `Calling ${contact.name}`);
   };
 
+  const handleMakeVideoCall = (contact) => {
+    setModalVisible(false);
+    Alert.alert('Video Call (Placeholder)', `Would call ${contact.name} (video)`);
+  };
+
+  // List Item Render
+  const renderContactItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.contactItem}
+      onPress={() => {
+        setSelectedContact(item);
+        setModalVisible(true);
+      }}
+    >
+      <View>
+        <Text style={styles.contactName}>{item.name}</Text>
+        <Text style={styles.contactDetail}>{item.type} · SIP: {item.sip}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Modal for Call Options
+  const CallOptionsModal = () => (
+    <Modal
+      visible={modalVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={styles.modalBackground}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>
+            Call {selectedContact?.name}
+          </Text>
+          <View style={styles.modalButtons}>
+            <Button
+              title="Audio Call"
+              onPress={() => handleMakeAudioCall(selectedContact)}
+              color="#3182ce"
+            />
+            <View style={{ height: 12 }} />
+            <Button
+              title="Video Call"
+              onPress={() => handleMakeVideoCall(selectedContact)}
+              color="#38a169"
+            />
+          </View>
+          <View style={{ height: 12 }} />
+          <Button
+            title="Cancel"
+            onPress={() => setModalVisible(false)}
+            color="#a0aec0"
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 22, marginBottom: 16 }}>Akuvox SDK Usage</Text>
-      <Button title="Init SDK" onPress={handleInitSdk} />
-      <Button title="Register SIP" onPress={handleRegisterSip} />
-      <Button title="Get SIP Status" onPress={handleGetSipStatus} />
-      <Button title="Make Call" onPress={handleMakeCall} />
-      {sipStatus !== null && <Text>SIP Status: {sipStatus}</Text>}
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Top SDK Control Bar */}
+      <View style={styles.topBar}>
+        <Button title="Init SDK" onPress={handleInitSdk} color="#2b6cb0" />
+        <Button title="Register SIP" onPress={handleRegisterSip} color="#2b6cb0" />
+        <Button title="SIP Status" onPress={handleGetSipStatus} color="#2b6cb0" />
+      </View>
+      <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+        <Text style={styles.headerTitle}>Contacts</Text>
+        <FlatList
+          data={contacts}
+          keyExtractor={(item) => item.id}
+          renderItem={renderContactItem}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          contentContainerStyle={{ paddingBottom: 24 }}
+        />
+        {sipStatus !== null && (
+          <Text style={styles.sipStatus}>SIP Status: {sipStatus}</Text>
+        )}
+      </View>
+      {modalVisible && selectedContact && <CallOptionsModal />}
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#f7fafc' },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#e2e8f0',
+    borderBottomWidth: 1,
+    borderColor: '#cbd5e0',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    textAlign: 'left',
+    marginBottom: 16,
+    color: '#2d3748',
+  },
+  contactItem: {
+    padding: 16,
+    borderRadius: 10,
+    backgroundColor: '#edf2f7',
+    marginVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+  },
+  contactName: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#2b6cb0',
+  },
+  contactDetail: {
+    fontSize: 14,
+    color: '#718096',
+    marginTop: 2,
+  },
+  separator: {
+    height: 8,
+  },
+  sipStatus: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#38a169',
+    textAlign: 'center',
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(45, 55, 72, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    width: '80%',
+    shadowColor: '#2d3748',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+    color: '#2b6cb0',
+    textAlign: 'center',
+  },
+  modalButtons: {
+    width: '100%',
+  },
+});
