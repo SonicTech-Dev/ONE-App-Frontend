@@ -207,6 +207,9 @@ export default function SdkContactScreen() {
       <TouchableOpacity
         style={styles.endCallButton}
         onPress={() => {
+          if (currentCallId !== null) {
+            Akuvox.hangupCall(currentCallId); // This actually ends the call!
+          }
           setShowVideoCall(false);
           setCurrentCallId(null);
         }}

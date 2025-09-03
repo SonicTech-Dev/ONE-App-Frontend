@@ -84,7 +84,13 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 @Override
                 public int sipMessageIncomingCall(CallDataBean callData) {
                     Log.d("SIP", "Incoming call: " + callData);
-                    // Optionally emit event for incoming call
+                    // You should emit an event to JS here so the UI can show incoming call UI!
+                    WritableMap params = Arguments.createMap();
+                    params.putInt("callId", callData.callId);
+                    params.putString("from", callData.remoteUserName); // or remoteDisplayName if available
+                    reactContext
+                        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                        .emit("onIncomingCall", params);
                     return 0;
                 }
 
@@ -170,6 +176,11 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         makeCallBean.remoteDisplayName = remoteDisplayName;
         makeCallBean.callVideoMode = callVideoMode;
         MediaManager.getInstance(reactContext).makeCall(makeCallBean, reactContext);
+    }
+
+    @ReactMethod
+    public void hangupCall(int callId) {
+        MediaManager.getInstance(reactContext).hungupCall(callId);
     }
 
     // You can implement answerCall, hangupCall, etc. as needed.
