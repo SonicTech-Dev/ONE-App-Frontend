@@ -2,9 +2,9 @@ package com.oneapp;
 
 import android.app.Application;
 import android.content.Context;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
-import android.util.Log;
 
 import com.akuvox.mobile.libcommon.model.media.MediaManager;
 import com.akuvox.mobile.libcommon.params.SurfaceViewsParams;
@@ -17,6 +17,14 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Promise;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
+
+/**
+ * AkuvoxModule: React Native bridge for Akuvox SIP/Video SDK.
+ * Handles SIP registration, call events, and emits events to JS for UI updates.
+ */
 public class AkuvoxModule extends ReactContextBaseJavaModule {
 
     private final ReactApplicationContext reactContext;
@@ -37,67 +45,84 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         MediaManager.initAKTalkSDK(
             (Application) reactContext.getApplicationContext(),
             new ISipMessageListener() {
-                 @Override
+                @Override
                 public int rtspMessageErrorMonitor(String error) {
                     Log.e("SIP", "RTSP error: " + error);
                     return 0;
                 }
+
                 @Override
                 public int rtspMessageEstablishedMonitor(int monitorId, SurfaceViewsParams surfaceViewsParams) {
-                    // Establish monitoring
                     Log.d("SIP", "RTSP established, monitorId: " + monitorId);
                     return 0;
                 }
 
                 @Override
                 public int rtspMessageFinishedMonitor() {
-                    // Finish monitoring
                     Log.d("SIP", "RTSP finished");
                     return 0;
                 }
 
                 @Override
                 public int sipMessageFinishedCall(int callId, String reason) {
-                    // Finish the call
                     Log.d("SIP", "Call finished: ID=" + callId + ", reason=" + reason);
+
+                    // Stop local video stream (release camera)
+                    MediaManager.getInstance(reactContext).stopLocalVideo(callId);
+
+                    // Emit event to JS for call ended (optional)
+                    WritableMap params = Arguments.createMap();
+                    params.putInt("callId", callId);
+                    params.putString("reason", reason);
+                    reactContext
+                        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                        .emit("onCallFinished", params);
+
                     return 0;
                 }
 
                 @Override
                 public int sipMessageIncomingCall(CallDataBean callData) {
-                    // An incoming call
                     Log.d("SIP", "Incoming call: " + callData);
+                    // Optionally emit event for incoming call
                     return 0;
                 }
 
                 @Override
                 public int sipMessageEstablishedCall(CallDataBean callData) {
-                    // Establish a call
-                    Log.d("SIP", "Call established: " + callData);
+                    // Use field, NOT method
+                    int callId = callData.callId;
+
+                    // Start camera stream for local video
+                    MediaManager.getInstance(reactContext).startLocalVideo(callId);
+
+                    // Emit event to JS to show video UI
+                    WritableMap params = Arguments.createMap();
+                    params.putInt("callId", callId);
+                    reactContext
+                        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                        .emit("onCallEstablished", params);
+                    Log.d("SIP", "Call established: " + callId);
+
                     return 0;
                 }
 
                 @Override
                 public int sipMessageRegStatus(int status) {
-                    // The account registration status
                     Log.d("SIP", "Registration status: " + status);
                     return 0;
                 }
 
-                    @Override
+                @Override
                 public int rtspMessageAudioIntercom(int var1, int var2, MonitorDataWrap var3) {
-                    // stub
                     return 0;
                 }
 
                 @Override
                 public int rtspMessageMonitorLoadSurfaceView(int var1, SurfaceViewsParams var2) {
-                    // stub
                     return 0;
                 }
-
             }
-
         );
         MediaManager.getInstance(reactContext).initMedia(reactContext);
     }
@@ -105,20 +130,17 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void registerSip(String ciphertext, String displayName, Promise promise) {
         try {
+            MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_TLS);
 
-        MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_TLS);
+            int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
 
-        int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
+            MediaManager.getInstance(reactContext).setSipBackendOnline(true);
 
-        MediaManager.getInstance(reactContext).setSipBackendOnline(true);
-        
             if (result == 0) {
                 promise.resolve("SIP account registered successfully.");
             } else {
                 promise.reject("REGISTER_ERROR", "setSipAccount returned error code: " + result);
             }
-
-
         } catch (Exception e) {
             promise.reject("REGISTER_EXCEPTION", e.getMessage());
         }
@@ -129,19 +151,17 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         try {
             int status = MediaManager.getInstance(reactContext).getLineStatus();
             /*
-            * -1: Failed
-            *  0: Disabled
-            *  1: Registering
-            *  2: Registered ✅
-            *  3: Registration Failed ❌
-            */
+             * -1: Failed
+             *  0: Disabled
+             *  1: Registering
+             *  2: Registered ✅
+             *  3: Registration Failed ❌
+             */
             promise.resolve(status);
         } catch (Exception e) {
             promise.reject("STATUS_ERROR", e.getMessage());
         }
     }
-
-
 
     @ReactMethod
     public void makeCall(String remoteUserName, String remoteDisplayName, int callVideoMode) {
@@ -152,5 +172,12 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         MediaManager.getInstance(reactContext).makeCall(makeCallBean, reactContext);
     }
 
-    // Add more methods as needed (answerCall, hangupCall, etc.)
+    // You can implement answerCall, hangupCall, etc. as needed.
+    // Example (uncomment and adapt as needed):
+    /*
+    @ReactMethod
+    public void answerCall(int callId) {
+        MediaManager.getInstance(reactContext).acceptCall(callId, 1);
+    }
+    */
 }

@@ -6,7 +6,7 @@ import com.facebook.react.uimanager.ViewManager;
 import com.facebook.react.bridge.ReactApplicationContext;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 public class AkuvoxPackage implements ReactPackage {
@@ -20,6 +20,9 @@ public class AkuvoxPackage implements ReactPackage {
 
     @Override
     public List<ViewManager> createViewManagers(ReactApplicationContext reactContext) {
-        return Collections.emptyList();
+        // Register the VideoCallViewManager here so it's available to React Native
+        return Arrays.<ViewManager>asList(
+            new VideoCallViewManager()
+        );
     }
 }

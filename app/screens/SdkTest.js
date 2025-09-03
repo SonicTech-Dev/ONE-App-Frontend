@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,113 +9,89 @@ import {
   StyleSheet,
   SafeAreaView,
   Modal,
+  PermissionsAndroid,
+  Platform,
+  NativeEventEmitter,
+  NativeModules,
 } from 'react-native';
-import { NativeModules } from 'react-native';
-
+import { requireNativeComponent } from 'react-native';
+// Correct native component name
 const { Akuvox } = NativeModules;
+const VideoCallView = requireNativeComponent('VideoCallView');
 
-// Sample data structure from your API
 const apiResult = {
   family_name: 'One-Dev Mockup-Flat',
   sip_group: '1191000500',
   devices: [
-    {
-      device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7',
-      device_name: 'HyPanel Supreme',
-      mac: '0C110500755C',
-      sip: '1192101703',
-    },
-    {
-      device_id: 'd9a69e144b34c47ea822169672c0fd40d',
-      device_name: 'Hypanel KeyPlus new',
-      mac: '0C110527CAAC',
-      sip: '1192101704',
-    },
-    {
-      device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba',
-      device_name: 'Hypanel Lux',
-      mac: '0C11052BF1CF',
-      sip: '1192101705',
-    },
-    {
-      device_id: 'd7ed72241e59342d29daffc0911503029',
-      device_name: 'Hypanel KeyPlus27CA8F',
-      mac: '0C110527CA8F',
-      sip: '1192101723',
-    },
+    { device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip: '1192101703' },
+    { device_id: 'd9a69e144b34c47ea822169672c0fd40d', device_name: 'Hypanel KeyPlus new', mac: '0C110527CAAC', sip: '1192101704' },
+    { device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip: '1192101705' },
+    { device_id: 'd7ed72241e59342d29daffc0911503029', device_name: 'Hypanel KeyPlus27CA8F', mac: '0C110527CA8F', sip: '1192101723' },
   ],
   accounts: [
-    {
-      account_id: 'a9b41de81c3284515a5e833d53412fe14',
-      sip: '1192101702',
-      account_name: 'fayis@sonictech.ae',
-      first_name: 'User',
-      last_name: 'Bela',
-      email: 'fayis@sonictech.ae',
-      main_sip: '1192101504',
-    },
-    {
-      account_id: 'a26325098299c4090b7db6117cc0d623f',
-      sip: '1192101706',
-      account_name: 'mahmoudsalah11350@gmail.com',
-      first_name: 'Mahmoud',
-      last_name: 'Salah',
-      email: 'mahmoudsalah11350@gmail.com',
-      main_sip: '1467100107',
-    },
+    { account_id: 'a9b41de81c3284515a5e833d53412fe14', sip: '1192101702', account_name: 'fayis@sonictech.ae', first_name: 'User', last_name: 'Bela', email: 'fayis@sonictech.ae', main_sip: '1192101504' },
+    { account_id: 'a26325098299c4090b7db6117cc0d623f', sip: '1192101706', account_name: 'mahmoudsalah11350@gmail.com', first_name: 'Mahmoud', last_name: 'Salah', email: 'mahmoudsalah11350@gmail.com', main_sip: '1467100107' },
   ],
   akuvox_devices: [
-    {
-      mac: '0C11052C6E92',
-      device_name: 'Intercom',
-      sip: '1192101722',
-    },
+    { mac: '0C11052C6E92', device_name: 'Intercom', sip: '1192101722' },
   ],
 };
 
 const getContacts = () => {
-  // Merge all devices/accounts/akuvox_devices into a unified contact list
   const contacts = [];
-
-  apiResult.devices.forEach((device) => {
-    contacts.push({
-      id: device.device_id,
-      name: device.device_name,
-      sip: device.sip,
-      type: 'Device',
-    });
+  apiResult.devices.forEach(device => {
+    contacts.push({ id: device.device_id, name: device.device_name, sip: device.sip, type: 'Device' });
   });
-
-  apiResult.accounts.forEach((account) => {
-    contacts.push({
-      id: account.account_id,
-      name: `${account.first_name} ${account.last_name}`,
-      sip: account.sip,
-      type: 'Account',
-    });
+  apiResult.accounts.forEach(account => {
+    contacts.push({ id: account.account_id, name: `${account.first_name} ${account.last_name}`, sip: account.sip, type: 'Account' });
   });
-
   apiResult.akuvox_devices.forEach((dev, idx) => {
-    contacts.push({
-      id: `akuvox_${idx}`,
-      name: dev.device_name,
-      sip: dev.sip,
-      type: 'Akuvox Device',
-    });
+    contacts.push({ id: `akuvox_${idx}`, name: dev.device_name, sip: dev.sip, type: 'Akuvox Device' });
   });
-
   return contacts;
 };
+
+// Request permissions before SDK and call
+async function requestPermissionsIfNeeded() {
+  if (Platform.OS === 'android') {
+    const camera = PermissionsAndroid.PERMISSIONS.CAMERA;
+    const audio = PermissionsAndroid.PERMISSIONS.RECORD_AUDIO;
+    const granted = await PermissionsAndroid.requestMultiple([camera, audio]);
+    return (
+      granted[camera] === PermissionsAndroid.RESULTS.GRANTED &&
+      granted[audio] === PermissionsAndroid.RESULTS.GRANTED
+    );
+  }
+  return true;
+}
 
 export default function SdkContactScreen() {
   const [sipStatus, setSipStatus] = useState(null);
   const [selectedContact, setSelectedContact] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+  const [currentCallId, setCurrentCallId] = useState(null); // Only set after SIP event
 
   const contacts = getContacts();
 
+  // Listen for SIP call established event
+  useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(Akuvox);
+    const sub = eventEmitter.addListener('onCallEstablished', (params) => {
+      // params.callId must be a valid int
+      setCurrentCallId(params.callId);
+      setShowVideoCall(true);
+    });
+    return () => sub.remove();
+  }, []);
+
   // SDK Actions
-  const handleInitSdk = () => {
+  const handleInitSdk = async () => {
+    const permissionsGranted = await requestPermissionsIfNeeded();
+    if (!permissionsGranted) {
+      Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
+      return;
+    }
     Akuvox.initSdk();
     Alert.alert('SDK Initialized');
   };
@@ -143,15 +119,27 @@ export default function SdkContactScreen() {
   };
 
   // Contact Call Actions
-  const handleMakeAudioCall = (contact) => {
-    Akuvox.makeCall(contact.sip, contact.name, 1);
+  const handleMakeAudioCall = async (contact) => {
+    const permissionsGranted = await requestPermissionsIfNeeded();
+    if (!permissionsGranted) {
+      Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
+      return;
+    }
+    Akuvox.makeCall(contact.sip, contact.name, 0); // 0 for audio call
     setModalVisible(false);
     Alert.alert('Making Audio Call', `Calling ${contact.name}`);
   };
 
-  const handleMakeVideoCall = (contact) => {
+  const handleMakeVideoCall = async (contact) => {
+    const permissionsGranted = await requestPermissionsIfNeeded();
+    if (!permissionsGranted) {
+      Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
+      return;
+    }
+    Akuvox.makeCall(contact.sip, contact.name, 1); // 1 for video call
     setModalVisible(false);
-    Alert.alert('Video Call (Placeholder)', `Would call ${contact.name} (video)`);
+    // Don't set video UI here! Wait for SIP event to setShowVideoCall and callId.
+    Alert.alert('Making Video Call', `Calling ${contact.name} (video)`);
   };
 
   // List Item Render
@@ -207,6 +195,27 @@ export default function SdkContactScreen() {
     </Modal>
   );
 
+  // Video Call Overlay UI (only shown with valid callId)
+  const VideoCallOverlay = () => (
+    <View style={styles.videoCallOverlay} pointerEvents="box-none">
+      {/* Remote video full screen */}
+      {(currentCallId !== null) && (
+        <VideoCallView style={styles.remoteVideo} type="remote" callId={currentCallId} />
+      )}
+      {/* Local video in corner */}
+      <VideoCallView style={styles.localVideo} type="local" />
+      <TouchableOpacity
+        style={styles.endCallButton}
+        onPress={() => {
+          setShowVideoCall(false);
+          setCurrentCallId(null);
+        }}
+      >
+        <Text style={styles.endCallText}>End Call</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Top SDK Control Bar */}
@@ -229,6 +238,7 @@ export default function SdkContactScreen() {
         )}
       </View>
       {modalVisible && selectedContact && <CallOptionsModal />}
+      {showVideoCall && currentCallId !== null && <VideoCallOverlay />}
     </SafeAreaView>
   );
 }
@@ -305,5 +315,43 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     width: '100%',
+  },
+  videoCallOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  remoteVideo: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#222',
+  },
+  localVideo: {
+    position: 'absolute',
+    width: 120,
+    height: 160,
+    right: 16,
+    top: 16,
+    backgroundColor: '#444',
+    borderRadius: 8,
+    overflow: 'hidden',
+    zIndex: 101,
+  },
+  endCallButton: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    backgroundColor: '#c53030',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    zIndex: 102,
+  },
+  endCallText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
   },
 });
