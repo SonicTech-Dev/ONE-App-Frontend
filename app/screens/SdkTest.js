@@ -15,7 +15,6 @@ import {
   NativeModules,
 } from 'react-native';
 import { requireNativeComponent } from 'react-native';
-// Correct native component name
 const { Akuvox } = NativeModules;
 const VideoCallView = requireNativeComponent('VideoCallView');
 
@@ -51,7 +50,6 @@ const getContacts = () => {
   return contacts;
 };
 
-// Request permissions before SDK and call
 async function requestPermissionsIfNeeded() {
   if (Platform.OS === 'android') {
     const camera = PermissionsAndroid.PERMISSIONS.CAMERA;
@@ -71,6 +69,7 @@ export default function SdkContactScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [currentCallId, setCurrentCallId] = useState(null); // Only set after SIP event
+  const [incomingCall, setIncomingCall] = useState(null); // {callId, from}
 
   const contacts = getContacts();
 
@@ -78,11 +77,22 @@ export default function SdkContactScreen() {
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(Akuvox);
     const sub = eventEmitter.addListener('onCallEstablished', (params) => {
-      // params.callId must be a valid int
       setCurrentCallId(params.callId);
       setShowVideoCall(true);
+      setIncomingCall(null); // hide incoming call UI if it was displayed
     });
     return () => sub.remove();
+  }, []);
+
+  // Listen for SIP incoming call event
+  useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(Akuvox);
+    const incomingCallSub = eventEmitter.addListener('onIncomingCall', (params) => {
+      setIncomingCall(params);
+      setShowVideoCall(false); // do not show video UI until accepted
+      setCurrentCallId(params.callId); // keep callId ready for accept/reject
+    });
+    return () => incomingCallSub.remove();
   }, []);
 
   // SDK Actions
@@ -138,8 +148,24 @@ export default function SdkContactScreen() {
     }
     Akuvox.makeCall(contact.sip, contact.name, 1); // 1 for video call
     setModalVisible(false);
-    // Don't set video UI here! Wait for SIP event to setShowVideoCall and callId.
     Alert.alert('Making Video Call', `Calling ${contact.name} (video)`);
+  };
+
+  // Accept/Reject Incoming Call
+  const handleAcceptCall = async () => {
+    if (!incomingCall || !incomingCall.callId) return;
+    // Accept video call by default (mode 1), or you can ask user
+    Akuvox.answerCall(incomingCall.callId); // Native must implement this!
+    setShowVideoCall(true);
+    setIncomingCall(null);
+  };
+
+  const handleRejectCall = async () => {
+    if (!incomingCall || !incomingCall.callId) return;
+    Akuvox.hangupCall(incomingCall.callId); // Ends the incoming call
+    setShowVideoCall(false);
+    setIncomingCall(null);
+    setCurrentCallId(null);
   };
 
   // List Item Render
@@ -195,6 +221,33 @@ export default function SdkContactScreen() {
     </Modal>
   );
 
+  // Incoming Call UI
+  const IncomingCallModal = () => (
+    <Modal
+      visible={!!incomingCall}
+      transparent
+      animationType="fade"
+      onRequestClose={handleRejectCall}
+    >
+      <View style={styles.incomingModalBg}>
+        <View style={styles.incomingModalContainer}>
+          <Text style={styles.incomingTitle}>Incoming Call</Text>
+          <Text style={styles.incomingFrom}>
+            {incomingCall?.from ? `From: ${incomingCall.from}` : ""}
+          </Text>
+          <View style={styles.incomingBtnRow}>
+            <TouchableOpacity style={styles.acceptBtn} onPress={handleAcceptCall}>
+              <Text style={styles.acceptBtnText}>Accept</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.rejectBtn} onPress={handleRejectCall}>
+              <Text style={styles.rejectBtnText}>Reject</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   // Video Call Overlay UI (only shown with valid callId)
   const VideoCallOverlay = () => (
     <View style={styles.videoCallOverlay} pointerEvents="box-none">
@@ -208,7 +261,7 @@ export default function SdkContactScreen() {
         style={styles.endCallButton}
         onPress={() => {
           if (currentCallId !== null) {
-            Akuvox.hangupCall(currentCallId); // This actually ends the call!
+            Akuvox.hangupCall(currentCallId);
           }
           setShowVideoCall(false);
           setCurrentCallId(null);
@@ -221,7 +274,6 @@ export default function SdkContactScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Top SDK Control Bar */}
       <View style={styles.topBar}>
         <Button title="Init SDK" onPress={handleInitSdk} color="#2b6cb0" />
         <Button title="Register SIP" onPress={handleRegisterSip} color="#2b6cb0" />
@@ -241,6 +293,7 @@ export default function SdkContactScreen() {
         )}
       </View>
       {modalVisible && selectedContact && <CallOptionsModal />}
+      {incomingCall && <IncomingCallModal />}
       {showVideoCall && currentCallId !== null && <VideoCallOverlay />}
     </SafeAreaView>
   );
@@ -318,6 +371,60 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     width: '100%',
+  },
+  incomingModalBg: {
+    flex: 1,
+    backgroundColor: 'rgba(45, 55, 72, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  incomingModalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 32,
+    width: '80%',
+    alignItems: 'center',
+    elevation: 8,
+  },
+  incomingTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2b6cb0',
+    marginBottom: 8,
+  },
+  incomingFrom: {
+    fontSize: 16,
+    color: '#718096',
+    marginBottom: 18,
+  },
+  incomingBtnRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  acceptBtn: {
+    backgroundColor: '#38a169',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    marginRight: 8,
+  },
+  acceptBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  rejectBtn: {
+    backgroundColor: '#c53030',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    marginLeft: 8,
+  },
+  rejectBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
   },
   videoCallOverlay: {
     ...StyleSheet.absoluteFillObject,
