@@ -22,7 +22,8 @@ public class AkuvoxPackage implements ReactPackage {
     public List<ViewManager> createViewManagers(ReactApplicationContext reactContext) {
         // Register the VideoCallViewManager here so it's available to React Native
         return Arrays.<ViewManager>asList(
-            new VideoCallViewManager()
+            new VideoCallViewManager(),
+            new SmartLockMonitorViewManager()
         );
     }
 }

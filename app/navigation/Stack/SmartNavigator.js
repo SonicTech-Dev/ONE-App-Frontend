@@ -3,7 +3,7 @@ import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
 import SmartScreen from "../../screens/SmartScreen";
 import SdkTest from "../../screens/SdkTest"; // <-- Import your SDK Usage screen
-
+import SmartLockScreen from "../../components/Smart/SmartLock/SmartLockScreen";
 const Stack = createStackNavigator();
 
 const SmartNavigator = ({ route, navigation }) => {
@@ -25,6 +25,15 @@ const SmartNavigator = ({ route, navigation }) => {
         options={{
           headerShown: true,
           title: "SDK Test",
+          headerTitleStyle: { color: 'black' },
+        }}
+      />
+      <Stack.Screen
+        name="SmartLockScreen"
+        component={SmartLockScreen}
+        options={{
+          headerShown: true,
+          title: "SL50 Smart Lock",
           headerTitleStyle: { color: 'black' },
         }}
       />

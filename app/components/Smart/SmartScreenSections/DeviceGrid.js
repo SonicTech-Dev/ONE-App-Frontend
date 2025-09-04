@@ -27,6 +27,19 @@ export default function DeviceGrid({
           disabled={false}
         />
       </View>
+      <View style={styles.sdkTestTileRow}>
+        <DeviceTile
+          title="Smart Lock Screen"
+          location="Smart Lock Page"
+          status=""
+          color="#4ac0ff"
+          isOn={false}
+          iconName="test-tube"
+          library="MaterialCommunityIcons"
+          onPress={() => navigation.navigate('SmartLockScreen')}
+          disabled={false}
+        />
+      </View>
       {/* Device Tiles */}
       {filteredDevices
         .reduce((result, device, index) => {
