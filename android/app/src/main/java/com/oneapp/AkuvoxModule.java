@@ -30,6 +30,8 @@ import com.facebook.react.bridge.Callback;
 public class AkuvoxModule extends ReactContextBaseJavaModule {
 
     private final ReactApplicationContext reactContext;
+    private IRtspMessageListener smartLockRtspListener = null;
+    private int lanMonitorId = -1;
 
     public AkuvoxModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -198,30 +200,33 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     }
 
     // LAN Video Monitoring (RTSP)
-    IRtspMessageListener smartLockRtspListener = null;
-
     @ReactMethod
-    public void setRtspMessageListener() {
-        Log.d("SMARTLOCK", "setRtspMessageListener called");
+    public void setRtspMessageListener(final String deviceId, final String userId) {
+        Log.d("SMARTLOCK", "setRtspMessageListener called for deviceId: " + deviceId + ", userId: " + userId);
         smartLockRtspListener = new IRtspMessageListener() {
             @Override
             public void onRtspReady(String msg) {
-                Log.d("SMARTLOCK", "RTSP Ready: " + msg);
+                Log.d("SMARTLOCK", "RTSP Ready: " + msg + ", deviceId: " + deviceId + ", userId: " + userId);
+                int monitorId = MediaManager.getInstance(reactContext).startMonitorViaLAN(deviceId, userId);
+                lanMonitorId = monitorId;
                 WritableMap params = Arguments.createMap();
                 params.putString("status", "rtspReady");
                 params.putString("msg", msg);
+                params.putInt("monitorId", monitorId);
                 reactContext
                     .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                     .emit("onSmartLockRtsp", params);
             }
             @Override
             public void onRtspStop() {
-                Log.d("SMARTLOCK", "RTSP Stopped");
+                Log.d("SMARTLOCK", "RTSP Stopped, deviceId: " + deviceId);
                 WritableMap params = Arguments.createMap();
                 params.putString("status", "rtspStop");
+                params.putInt("monitorId", lanMonitorId);
                 reactContext
                     .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                     .emit("onSmartLockRtsp", params);
+                lanMonitorId = -1;
             }
         };
         MediaManager.getInstance(reactContext).setRtspMessageListener(smartLockRtspListener);
@@ -232,18 +237,13 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         Log.d("SMARTLOCK", "clearRtspMessageListener called");
         MediaManager.getInstance(reactContext).setRtspMessageListener(null);
         smartLockRtspListener = null;
+        lanMonitorId = -1;
     }
 
     @ReactMethod
     public void prepareVideoStart(String deviceId) {
         Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId);
         MediaManager.getInstance(reactContext).prepareVideoStart(deviceId);
-    }
-
-    @ReactMethod
-    public void startMonitorViaLAN(String deviceId, String userId) {
-        Log.d("SMARTLOCK", "startMonitorViaLAN called: " + deviceId);
-        MediaManager.getInstance(reactContext).startMonitorViaLAN(deviceId, userId);
     }
 
     @ReactMethod

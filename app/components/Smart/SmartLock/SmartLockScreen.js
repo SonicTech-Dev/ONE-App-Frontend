@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Button, Alert, StyleSheet } from 'react-native';
 import { NativeModules, NativeEventEmitter } from 'react-native';
 import { requireNativeComponent } from 'react-native';
 
 const { Akuvox } = NativeModules;
 const SmartLockMonitorView = requireNativeComponent('SmartLockMonitorView');
+
 export default function SmartLockScreen() {
   // Dummy for demo, replace with real cloud/device data
   const residenceId = 'r45844047053e43d78fe5272c5badbd3a';
@@ -15,6 +16,27 @@ export default function SmartLockScreen() {
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [monitorId, setMonitorId] = useState(null);
   const [unlockStatus, setUnlockStatus] = useState(null);
+
+  useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(Akuvox);
+    const subscription = eventEmitter.addListener('onSmartLockRtsp', event => {
+      // Debug: Log event for troubleshooting
+      console.log('Received RTSP Event:', event);
+      if (
+        event.status === 'rtspReady' &&
+        typeof event.monitorId === 'number' &&
+        event.monitorId > 0
+      ) {
+        setMonitorId(event.monitorId);
+        setIsMonitoring(true);
+      }
+      if (event.status === 'rtspStop') {
+        setIsMonitoring(false);
+        setMonitorId(null);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   // 1. Call this ONCE when page loads (or in useEffect)
   const handleInitLockConfig = () => {
@@ -32,11 +54,9 @@ export default function SmartLockScreen() {
 
   // 3. Start monitoring
   const handleStartMonitor = () => {
-    Akuvox.setRtspMessageListener();
+    Akuvox.setRtspMessageListener(deviceId, userId);
     Akuvox.prepareVideoStart(deviceId);
-    Akuvox.startMonitorViaLAN(deviceId, userId);
-    setIsMonitoring(true);
-    // You may want to listen for monitorId from event!
+    // isMonitoring will change after monitorId is received from RTSP event
   };
 
   // 4. Stop monitoring
@@ -45,8 +65,9 @@ export default function SmartLockScreen() {
       Akuvox.stopVideoViaLAN(deviceId);
       Akuvox.finishMonitor(monitorId);
     }
-    Akuvox.setRtspMessageListener(null);
+    Akuvox.clearRtspMessageListener();
     setIsMonitoring(false);
+    setMonitorId(null);
   };
 
   return (
@@ -62,9 +83,9 @@ export default function SmartLockScreen() {
       ) : (
         <Button title="Stop Monitoring" onPress={handleStopMonitor} color="#c53030" />
       )}
-      {isMonitoring && (
+      {isMonitoring && monitorId !== null && monitorId > 0 && (
         <View style={styles.videoContainer}>
-          <SmartLockMonitorView style={{flex: 1}} monitorId={monitorId} />
+          <SmartLockMonitorView style={{ flex: 1 }} monitorId={monitorId} />
         </View>
       )}
     </View>
@@ -75,5 +96,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 32, backgroundColor: '#fff' },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 24 },
   status: { fontSize: 18, color: '#38a169', marginTop: 12 },
-  videoContainer: { flex: 1, marginTop: 24, borderRadius: 12, overflow: 'hidden', backgroundColor: '#222' },
+  videoContainer: {
+    flex: 1,
+    marginTop: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#222',
+    minHeight: 200,
+  },
 });
