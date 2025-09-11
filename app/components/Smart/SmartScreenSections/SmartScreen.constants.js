@@ -26,26 +26,26 @@ export const INITIAL_DEVICE_CATEGORIES = [
             ability_id: 'e6d42554a84ad481c8ae0836d33fafbbb',
             commandPair: { on: 'open', off: 'close' , stop: 'stop' }
           }},
-          { title: 'Smart Valve', location: 'Mockup Room', status: 'off', color: '#ffd700', isOn: false, iconName: 'pipe-valve' , library: 'MaterialCommunityIcons',
-          lan: {
-            device_id: '1ee057b714250532daf237e6a5db338e',
-            ability_id: 'switch.3cadbd37b9da10a57edf70c087b11de1',
-            commandPair: { on: 'turn_on', off: 'turn_off' }
-          },
-          wan: {
-            device_id: 'df61b80958ad64cbeb829f67438813fe4',
-            ability_id: 'e02ef75fa89e04b529477f5b98b8d79c1',
-            commandPair: { on: 'turn_on', off: 'turn_off' }
-          }},
-          { title: 'Dimmer 1', location: 'Mockup Room', status: 'On', color: '#8e44ad', isOn: false, iconName: 'bulb' ,library: 'Ionicons',
+          { title: 'SpotLight Entrance', location: 'Mockup Room', status: 'off', color: '#ffd700', isOn: false, iconName: 'pipe-valve' , library: 'MaterialCommunityIcons',
           lan: {
             device_id: '0c110500755c_61_1',
             ability_id: 'switch.0c110500755c_61_1',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'dfbc4db620ddf4e79b1a667aa862c0a4a',
-            ability_id: 'e2ef9a546df6d4ee6b8f305c8a8ebeb34',
+            device_id: 'dd559f7bd23884afdaf30e9fc4160fd53',
+            ability_id: 'e4108c3f6bfb649afa26646bacf4db2a0',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
+          }},
+          { title: 'ProfileLED Entrance', location: 'Mockup Room', status: 'On', color: '#8e44ad', isOn: false, iconName: 'bulb' ,library: 'Ionicons',
+          lan: {
+            device_id: '0c110500755c_62_1',
+            ability_id: 'switch.0c110500755c_62_1',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
+          },
+          wan: {
+            device_id: 'dd559f7bd23884afdaf30e9fc4160fd53',
+            ability_id: 'e4108c3f6bfb649afa26646bacf4db2a0',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'Dimmer 2', location: 'Mockup Room', status: 'On', color: '#8e44ad', isOn: false, iconName: 'bulb' ,library: 'Ionicons',
