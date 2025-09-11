@@ -6,7 +6,6 @@ import android.widget.FrameLayout;
 import android.util.Log;
 import android.view.ViewGroup;
 
-import com.akuvox.mobile.libcommon.model.media.MediaManager;
 import com.facebook.react.uimanager.SimpleViewManager;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
@@ -25,8 +24,7 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
 
     @Override
     protected FrameLayout createViewInstance(ThemedReactContext reactContext) {
-        FrameLayout frameLayout = new FrameLayout(reactContext);
-        return frameLayout;
+        return new FrameLayout(reactContext);
     }
 
     /**
@@ -38,21 +36,23 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
         Context context = view.getContext();
         view.removeAllViews();
         Log.d(REACT_CLASS, "setMonitorId called with monitorId: " + monitorId);
-        // Only attach if monitorId is valid
+
         if (monitorId > 0) {
             try {
-                SurfaceView remoteView = MediaManager.getInstance(context).getRemoteVideoView(monitorId);
+                SurfaceView remoteView = SmartLockVideoCache.get(monitorId);
                 if (remoteView != null) {
                     // Remove from any previous parent
                     ViewGroup parent = (ViewGroup) remoteView.getParent();
                     if (parent != null) {
                         parent.removeView(remoteView);
                     }
-                    view.addView(remoteView, new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT
-                    ));
-                    Log.d(REACT_CLASS, "Smart lock remote video view attached for monitorId: " + monitorId);
+                    view.post(() -> {
+                        view.addView(remoteView, new FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                        ));
+                        Log.d(REACT_CLASS, "Smart lock remote video view attached for monitorId: " + monitorId);
+                    });
                 } else {
                     Log.e(REACT_CLASS, "Smart lock remote video view is null for monitorId: " + monitorId);
                 }

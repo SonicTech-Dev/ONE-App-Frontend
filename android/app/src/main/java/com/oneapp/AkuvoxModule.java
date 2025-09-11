@@ -2,7 +2,6 @@ package com.oneapp;
 
 import android.app.Application;
 import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import com.akuvox.mobile.libcommon.model.media.MediaManager;
@@ -14,34 +13,38 @@ import com.akuvox.mobile.libcommon.udp.IRtspMessageListener;
 import com.akuvox.mobile.libcommon.udp.IRequestListener;
 import com.akuvox.mobile.libcommon.wrapper.struct.MonitorDataWrap;
 import com.akuvox.mobile.libcommon.bean.SipTransTypeEnum;
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.facebook.react.bridge.Callback;
 
-/**
- * AkuvoxModule: React Native bridge for Akuvox SIP/Video SDK & Smart Lock.
- * Handles SIP registration, call events, smart lock LAN unlock/monitoring, and emits events to JS for UI updates.
- */
 public class AkuvoxModule extends ReactContextBaseJavaModule {
 
     private final ReactApplicationContext reactContext;
     private IRtspMessageListener smartLockRtspListener = null;
-    private int lanMonitorId = -1;
 
     public AkuvoxModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.reactContext = reactContext;
+        Log.d("AkuvoxModule", "AkuvoxModule loaded");
     }
 
     @NonNull
     @Override
     public String getName() {
         return "Akuvox";
+    }
+
+    // Utility to emit events to JS
+    private void emitToJS(String eventName, WritableMap params) {
+        Log.d("AkuvoxModule", "Emitting event to JS: " + eventName + " | " + params.toString());
+        reactContext
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+            .emit(eventName, params);
     }
 
     // ---------------- SIP/VIDEO CALL SDK ---------------- //
@@ -60,7 +63,11 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
 
                 @Override
                 public int rtspMessageEstablishedMonitor(int monitorId, SurfaceViewsParams surfaceViewsParams) {
-                    Log.d("SIP", "RTSP established, monitorId: " + monitorId);
+                    Log.d("AkuvoxModule", "rtspMessageEstablishedMonitor called! monitorId=" + monitorId);
+                    WritableMap params = Arguments.createMap();
+                    params.putInt("monitorId", monitorId);
+                    params.putString("surfaceViewsParams", surfaceViewsParams != null ? surfaceViewsParams.toString() : "null");
+                    emitToJS("onMonitorEstablished", params);
                     return 0;
                 }
 
@@ -77,15 +84,13 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     WritableMap params = Arguments.createMap();
                     params.putInt("callId", callId);
                     params.putString("reason", reason);
-                    reactContext
-                        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                        .emit("onCallFinished", params);
+                    emitToJS("onCallFinished", params);
                     return 0;
                 }
 
                 @Override
                 public int sipMessageIncomingCall(CallDataBean callData) {
-                    Log.d("SIP", "Incoming call: callId=" + callData.callId 
+                    Log.d("SIP", "Incoming call: callId=" + callData.callId
                         + ", remoteUserName=" + callData.remoteUserName
                         + ", remoteDisplayName=" + callData.remoteDisplayName
                         + ", callVideoMode=" + callData.callVideoMode);
@@ -94,9 +99,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     params.putString("remoteUserName", callData.remoteUserName);
                     params.putString("remoteDisplayName", callData.remoteDisplayName);
                     params.putInt("callVideoMode", callData.callVideoMode);
-                    reactContext
-                        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                        .emit("onIncomingCall", params);
+                    emitToJS("onIncomingCall", params);
                     return 0;
                 }
 
@@ -106,9 +109,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     MediaManager.getInstance(reactContext).startLocalVideo(callId);
                     WritableMap params = Arguments.createMap();
                     params.putInt("callId", callId);
-                    reactContext
-                        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                        .emit("onCallEstablished", params);
+                    emitToJS("onCallEstablished", params);
                     Log.d("SIP", "Call established: " + callId);
                     return 0;
                 }
@@ -125,7 +126,12 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 }
 
                 @Override
-                public int rtspMessageMonitorLoadSurfaceView(int var1, SurfaceViewsParams var2) {
+                public int rtspMessageMonitorLoadSurfaceView(int monitorId, SurfaceViewsParams surfaceViewsParams) {
+                    Log.d("AkuvoxModule", "rtspMessageMonitorLoadSurfaceView called! monitorId=" + monitorId);
+                    WritableMap params = Arguments.createMap();
+                    params.putInt("monitorId", monitorId);
+                    params.putString("surfaceViewsParams", surfaceViewsParams != null ? surfaceViewsParams.toString() : "null");
+                    emitToJS("onMonitorLoadSurfaceView", params);
                     return 0;
                 }
             }
@@ -171,12 +177,12 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void hangupCall(int callId) {
-        MediaManager.getInstance(reactContext).hungupCall(callId); // Corrected spelling
+        MediaManager.getInstance(reactContext).hungupCall(callId);
     }
 
     @ReactMethod
     public void answerCall(int callId) {
-        MediaManager.getInstance(reactContext).answerCall(callId, 1); // 1 for video, 0 for audio
+        MediaManager.getInstance(reactContext).answerCall(callId, 1);
     }
 
     // ---------------- SMART LOCK SDK EXTENSIONS ---------------- //
@@ -199,34 +205,27 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         });
     }
 
-    // LAN Video Monitoring (RTSP)
+    // Only signal 'rtspReady' to JS, but do NOT include a monitorId for video!
     @ReactMethod
     public void setRtspMessageListener(final String deviceId, final String userId) {
         Log.d("SMARTLOCK", "setRtspMessageListener called for deviceId: " + deviceId + ", userId: " + userId);
         smartLockRtspListener = new IRtspMessageListener() {
             @Override
-            public void onRtspReady(String msg) {
-                Log.d("SMARTLOCK", "RTSP Ready: " + msg + ", deviceId: " + deviceId + ", userId: " + userId);
-                int monitorId = MediaManager.getInstance(reactContext).startMonitorViaLAN(deviceId, userId);
-                lanMonitorId = monitorId;
+            public void onRtspReady(String rtspUrl) {
+                Log.d("SMARTLOCK", "RTSP Ready: " + rtspUrl + ", deviceId: " + deviceId + ", userId: " + userId);
+                MediaManager.getInstance(reactContext).startMonitorViaLAN(rtspUrl, deviceId);
                 WritableMap params = Arguments.createMap();
                 params.putString("status", "rtspReady");
-                params.putString("msg", msg);
-                params.putInt("monitorId", monitorId);
-                reactContext
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                    .emit("onSmartLockRtsp", params);
+                params.putString("rtspUrl", rtspUrl);
+                params.putInt("monitorId", 0); // always 0! not valid for video.
+                emitToJS("onSmartLockRtsp", params);
             }
             @Override
             public void onRtspStop() {
                 Log.d("SMARTLOCK", "RTSP Stopped, deviceId: " + deviceId);
                 WritableMap params = Arguments.createMap();
                 params.putString("status", "rtspStop");
-                params.putInt("monitorId", lanMonitorId);
-                reactContext
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                    .emit("onSmartLockRtsp", params);
-                lanMonitorId = -1;
+                emitToJS("onSmartLockRtsp", params);
             }
         };
         MediaManager.getInstance(reactContext).setRtspMessageListener(smartLockRtspListener);
@@ -237,7 +236,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         Log.d("SMARTLOCK", "clearRtspMessageListener called");
         MediaManager.getInstance(reactContext).setRtspMessageListener(null);
         smartLockRtspListener = null;
-        lanMonitorId = -1;
     }
 
     @ReactMethod
@@ -256,5 +254,22 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     public void finishMonitor(int monitorId) {
         Log.d("SMARTLOCK", "finishMonitor called: " + monitorId);
         MediaManager.getInstance(reactContext).finishMonitor(monitorId);
+    }
+
+    @ReactMethod
+    public void startWanMonitor(String rtspUrl, String ciphertext, Promise promise) {
+        try {
+            Log.d("WAN_MONITOR", "startWanMonitor called: rtspUrl=" + rtspUrl + ", ciphertext=" + ciphertext);
+            int monitorId = MediaManager.getInstance(reactContext).startMonitor(rtspUrl, ciphertext);
+            Log.d("WAN_MONITOR", "startMonitor returned monitorId: " + monitorId);
+            WritableMap params = Arguments.createMap();
+            params.putInt("monitorId", monitorId);
+            params.putString("rtspUrl", rtspUrl);
+            promise.resolve(params);
+            emitToJS("onWanMonitorStarted", params);
+        } catch (Exception e) {
+            Log.e("WAN_MONITOR", "startWanMonitor exception: " + e.getMessage(), e);
+            promise.reject("WAN_MONITOR_ERROR", e.getMessage());
+        }
     }
 }

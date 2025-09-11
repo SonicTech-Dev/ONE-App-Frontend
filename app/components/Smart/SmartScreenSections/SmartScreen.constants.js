@@ -4,7 +4,18 @@ export const INITIAL_DEVICE_CATEGORIES = [
         {
         category: 'Mockup Room',
         items: [
-          { title: 'Curtain', location: 'Mockup Room', status: 'Off', color: '#4ac0ff', isOn: false, iconName: 'curtains' , library: 'MaterialCommunityIcons',
+          { title: 'Curtain-1', location: 'Mockup Room', status: 'Off', color: '#4ac0ff', isOn: false, iconName: 'curtains' , library: 'MaterialCommunityIcons',
+          lan: {
+            device_id: '0c110500755b_91_5',
+            ability_id: 'cover.0c110500755b_91_5',
+            commandPair: { on: 'turn_on', off: 'turn_off', stop: 'stop' }
+          },
+          wan: {
+            device_id: 'd02b8a93297a748deb2c4ea56ab0e31d9',
+            ability_id: 'e6d42554a84ad481c8ae0836d33fafbbb',
+            commandPair: { on: 'open', off: 'close' , stop: 'stop' }
+          }},
+          { title: 'Curtain-2', location: 'Mockup Room', status: 'Off', color: '#4ac0ff', isOn: false, iconName: 'curtains' , library: 'MaterialCommunityIcons',
           lan: {
             device_id: '0c110500755b_91_5',
             ability_id: 'cover.0c110500755b_91_5',
