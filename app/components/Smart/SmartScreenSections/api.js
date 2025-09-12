@@ -9,7 +9,7 @@ export const controlDevice = async (
   LAN_HEADERS
 ) => {
   if (selectedOption === 'LAN') {
-    const lanApiUrl = `http://192.168.1.103/api/v1.0/device`;
+    const lanApiUrl = `http://192.168.1.102/api/v1.0/device`;
     const body = {
       command: "control_device",
       id: "c45e846ca23ab42c9ae469d988ae32a96",
@@ -38,7 +38,7 @@ export const controlDevice = async (
       Alert.alert('Error', 'Failed to control device locally.');
     }
   } else {
-    const apiUrl = 'http://192.168.1.103:8000/control_devices/';
+    const apiUrl = 'http://10.255.254.61:8000/control_devices/';
     const body = {
       command: 'batch_control_device',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
@@ -83,7 +83,7 @@ export const deviceStatus = async (
   LAN_HEADERS
 ) => {
   if (selectedOption === 'LAN') {
-    const lanApiUrl = `http://192.168.1.103/api/v1.0/device`;
+    const lanApiUrl = `http://192.168.1.102/api/v1.0/device`;
     const body = {
       command: 'get_device_info',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
@@ -110,7 +110,7 @@ export const deviceStatus = async (
       Alert.alert('Error', 'Failed to control device locally.');
     }
   } else {
-    const apiUrl = 'http://192.168.1.103:8000/device_status/';
+    const apiUrl = 'http://10.255.254.61:8000/device_status/';
     const body = {
       command: 'get_device_info',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
