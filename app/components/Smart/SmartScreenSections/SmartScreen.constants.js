@@ -99,8 +99,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'ddeb893627de44fad8f41f76a82c6def9',
-            ability_id: 'ef43f29dc162c457bbcddde14af78e92f',
+            device_id: 'd2a39f1771995416abdffa70f824fff91',
+            ability_id: 'e6e4c364524d44f94978af01bb15df023',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'CoveLight Reception', location: 'Mockup Room', status: 'On', color: '#44ad57ff', isOn: false, iconName: 'snow' ,library: 'Ionicons',
@@ -110,8 +110,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'de40ea739d12a404e8131b5c9c88afd1c',
-            ability_id: 'e34500e7fc9cc49d2a4a47ef86d467a31',
+            device_id: 'da2c227862c94420e917cb35587c903fa',
+            ability_id: 'ecaa8286bc5664f65ae256e661d4eb034',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'SpotLight Toilet', location: 'Mockup Room', status: 'On', color: '#eeff00ff', isOn: false, iconName: 'light-switch' ,library: 'MaterialCommunityIcons',
@@ -121,8 +121,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'dc753f65f43d94bd9baee70517f438378',
-            ability_id: 'e36bcc6c266cc473d9eec5c5d06b69ec1',
+            device_id: 'd72f2703f8bc041828756297384186785',
+            ability_id: 'e8c90454417fa49958bbaddb9730af5d9',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'ProfileLED Toilet', location: 'Mockup Room', status: 'On', color: '#eeff00ff', isOn: false, iconName: 'light-switch' ,library: 'MaterialCommunityIcons',
@@ -132,8 +132,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'dc753f65f43d94bd9baee70517f438378',
-            ability_id: 'e728c130866d44433abef2a8c6a8ec495',
+            device_id: 'da02f25afed2f433588db446c731cc339',
+            ability_id: 'ee8723cef9e8b4b97a35ef7f475e4622d',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'ExhaustFan Toilet', location: 'Mockup Room', status: 'On', color: '#eeff00ff', isOn: false, iconName: 'light-switch' ,library: 'MaterialCommunityIcons',
@@ -143,8 +143,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'dc753f65f43d94bd9baee70517f438378',
-            ability_id: 'e728c130866d44433abef2a8c6a8ec495',
+            device_id: 'd09d8fd7910884df3ba90c0ff65749bab',
+            ability_id: 'e67c9175f62344999b49cfa21ee11e4f2',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'SpotLight Laundry', location: 'Mockup Room', status: 'On', color: '#7f8c8d', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
@@ -154,8 +154,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'df1bb3641d84d4261a087bcb028ac92bc',
-            ability_id: 'e2871a263ade34cb1bccb99161e218851',
+            device_id: 'd0b32e3a28fbf4dfca04b187eff64ebc6',
+            ability_id: 'e6d37284d7df44c4c93baf734b674308d',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'ExhaustFan Laundry', location: 'Mockup Room', status: 'On', color: '#7f8c8d', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
@@ -165,8 +165,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'df1bb3641d84d4261a087bcb028ac92bc',
-            ability_id: 'ea17afa6af48046b1911e25e8af63a797',
+            device_id: 'de30a44dbb94047dfbd8b6ce185bf33e2',
+            ability_id: 'e937293a528614a30883eb5c21cc6e20e',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'SpotLight Balcony', location: 'Mockup Room', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
@@ -176,8 +176,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'df1bb3641d84d4261a087bcb028ac92bc',
-            ability_id: 'e3234060e8082472aa480cd06d32afd9b',
+            device_id: 'd8aa34ba30a594219b2e047f3ee30349e',
+            ability_id: 'eafa9ee6cebed410f801df0f2fd52df38',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'ProfileLED Balcony', location: 'Mockup Room', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
@@ -187,8 +187,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'df1bb3641d84d4261a087bcb028ac92bc',
-            ability_id: 'e5517e0b7eb01452cb01aa3a4f67442b4',
+            device_id: 'de03b7c4fc31b44fcafaf578ab249cb3d',
+            ability_id: 'ed2b29c985085412e839c7d5694db18e2',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'SpotLight Balcony', location: 'Mockup Room', status: 'On', color: '#00eeffff', isOn: false, iconName: 'door-sliding-lock' ,library: 'MaterialCommunityIcons',
@@ -198,8 +198,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'db2e1e1facd954e5b8877dbe2f20c1be9',
-            ability_id: 'e199f9672cfd5439994c79965566266eb',
+            device_id: 'd8a7b66602b8c4043b6c8ba085ab03382',
+            ability_id: 'e654b2d73661947db9e1a963a0d1ef398',
             commandPair: { on: 'lock', off: 'unlock' }
           }},
           { title: 'ProfileLED Balcony', location: 'Mockup Room', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
@@ -209,97 +209,97 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'df1bb3641d84d4261a087bcb028ac92bc',
-            ability_id: 'e5517e0b7eb01452cb01aa3a4f67442b4',
+            device_id: 'dd2c8c003c6a14b85bdb561322bcae49c',
+            ability_id: 'e537836951c5a4ce595ac085cff778334',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'SpotLight MasterBedroom', location: 'Mockup Room', status: 'Off', color: '#ffbf42', isOn: false, iconName: 'home-flood' ,library: 'MaterialCommunityIcons',
           lan: {
             device_id: '0c11052bf1cf_61_1',
             ability_id: 'switch.0c11052bf1cf_61_1',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'dadf63b94876444eea78c7493c37c8fdf',
-            ability_id: 'e5294f4c4224b457ab8981fc3d5c3d863',
-            commandPair: { on: 'lock', off: 'unlock' }
+            device_id: 'd8aa34ba30a594219b2e047f3ee30349e',
+            ability_id: 'eafa9ee6cebed410f801df0f2fd52df38',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'ProfileLED MasterBedroom', location: 'Mockup Room', status: 'Off', color: '#ffbf42', isOn: false, iconName: 'smoke' ,library: 'MaterialCommunityIcons',
           lan: {
             device_id: '0c11052bf1cf_62_1',
             ability_id: 'switch.0c11052bf1cf_62_1',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd3e1a9eeb93564914ad76cae2a03a3076',
-            ability_id: 'e5294f4c4224b457ab8981fc3d5c3d863',
-            commandPair: { on: 'lock', off: 'unlock' }
+            device_id: 'de03b7c4fc31b44fcafaf578ab249cb3d',
+            ability_id: 'ed2b29c985085412e839c7d5694db18e2',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'CoveLight MasterBedroom', location: 'Mockup Room', status: 'Off', color: '#ffbf42', isOn: false, iconName: 'walk' ,library: 'Ionicons',
           lan: {
             device_id: '0c11052bf1cf_63_1',
             ability_id: 'switch.0c11052bf1cf_63_1',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
             device_id: 'decbc855cd65847eda575eb136627bba3',
             ability_id: 'e5294f4c4224b457ab8981fc3d5c3d863',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'MagneticTrack MasterBedroom', location: 'Mockup Room', status: 'Off', color: '#ffbf42', isOn: false, iconName: 'temperature-low' ,library: 'FontAwesome6',
           lan: {
             device_id: '9ca500c71502a3b8939ce0e886dcf527',
             ability_id: 'switch.e24606d661839535225d672aebcae74b',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd1266dfb7fc8e4e7d95af15caf2dc0604',
-            ability_id: 'e5294f4c4224b457ab8981fc3d5c3d863',
-            commandPair: { on: 'lock', off: 'unlock' }
+            device_id: 'd668ecd0a7bf44daeb92c8c089bef5538',
+            ability_id: 'eed4bf42777764b7faaa4be691eed2c0a',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'SpotLight LivingRoom', location: 'Mockup Room', status: 'off', color: '#ff00e6ff', isOn: false, iconName: 'human-greeting-variant' ,library: 'MaterialCommunityIcons',
           lan: {
             device_id: 'b3ee61e963fc08f3fce1a290ee4a503d',
             ability_id: 'switch.9a7d564af899531474785f0c04eb82f9',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd908f976b0ae4434b9b7af14233ecf551',
-            ability_id: 'e5294f4c4224b457ab8981fc3d5c3d863',
-            commandPair: { on: 'lock', off: 'unlock' }
+            device_id: 'd9c52afe868ae4b37bfb726bc37893e7c',
+            ability_id: 'e8b000d0f2d474ecdb5b4cbe5070854da',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'ProfileLED LivingRoom', location: 'Mockup Room', status: 'off', color: '#ff00e6ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
             device_id: 'b3ee61e963fc08f3fce1a290ee4a503d',
             ability_id: 'switch.9a7d564af899531474785f0c04eb82f9',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd9b1ff02c5e244a40a41e5d29f41126d3',
-            ability_id: 'e5294f4c4224b457ab8981fc3d5c3d863',
-            commandPair: { on: 'lock', off: 'unlock' }
+            device_id: 'd34a26148532f44119212af8a0be2d466',
+            ability_id: 'e7f06a9b903384e9c8f7bece392242250',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'SpotLight MasterToilet', location: 'Mockup Room', status: 'off', color: '#5d8185ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
             device_id: 'a4441cc618293abb8d29adbf2387e18c',
             ability_id: 'binary_sensor.dfaee6764c3eece4e8994ba1a1be56bb',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd9b1ff02c5e244a40a41e5d29f41126d3',
-            ability_id: 'e5294f4c4224b457ab8981fc3d5c3d863',
-            commandPair: { on: 'lock', off: 'unlock' }
+            device_id: 'd72f2703f8bc041828756297384186785',
+            ability_id: 'e8c90454417fa49958bbaddb9730af5d9',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'Exhaust MasterToilet', location: 'Mockup Room', status: 'off', color: '#5d8185ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
             device_id: 'a4441cc618293abb8d29adbf2387e18c',
             ability_id: 'binary_sensor.dfaee6764c3eece4e8994ba1a1be56bb',
-            commandPair: { on: 'lock', off: 'unlock' }
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd9b1ff02c5e244a40a41e5d29f41126d3',
-            ability_id: 'e5294f4c4224b457ab8981fc3d5c3d863',
-            commandPair: { on: 'lock', off: 'unlock' }
+            device_id: 'd09d8fd7910884df3ba90c0ff65749bab',
+            ability_id: 'e67c9175f62344999b49cfa21ee11e4f2',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
 
         ],
