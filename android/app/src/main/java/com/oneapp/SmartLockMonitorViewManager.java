@@ -40,6 +40,7 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
         if (monitorId > 0) {
             try {
                 SurfaceView remoteView = SmartLockVideoCache.get(monitorId);
+                Log.d(REACT_CLASS, "Fetched SurfaceView for monitorId: " + monitorId + " = " + remoteView);
                 if (remoteView != null) {
                     // Remove from any previous parent
                     ViewGroup parent = (ViewGroup) remoteView.getParent();

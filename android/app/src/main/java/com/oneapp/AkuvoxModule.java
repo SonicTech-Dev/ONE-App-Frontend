@@ -3,6 +3,7 @@ package com.oneapp;
 import android.app.Application;
 import android.util.Log;
 import androidx.annotation.NonNull;
+import android.view.SurfaceView;
 
 import com.akuvox.mobile.libcommon.model.media.MediaManager;
 import com.akuvox.mobile.libcommon.params.SurfaceViewsParams;
@@ -60,14 +61,31 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     Log.e("SIP", "RTSP error: " + error);
                     return 0;
                 }
-
                 @Override
                 public int rtspMessageEstablishedMonitor(int monitorId, SurfaceViewsParams surfaceViewsParams) {
                     Log.d("AkuvoxModule", "rtspMessageEstablishedMonitor called! monitorId=" + monitorId);
+
+                    // Get the SurfaceView from SDK
+                    SurfaceView remoteView = MediaManager
+                        .getInstance(getReactApplicationContext())
+                        .getRemoteVideoView(monitorId);
+
+                    Log.d("AkuvoxModule", "getRemoteVideoView for monitorId=" + monitorId + ", remoteView=" + remoteView);
+
+                    if (remoteView != null) {
+                        SmartLockVideoCache.put(monitorId, remoteView);
+                        Log.d("AkuvoxModule", "Remote video view cached for monitorId=" + monitorId);
+                    } else {
+                        Log.e("AkuvoxModule", "Failed to get remote video view for monitorId=" + monitorId);
+                    }
+
+                    // Emit event to JS so RN side knows which monitorId to use
                     WritableMap params = Arguments.createMap();
                     params.putInt("monitorId", monitorId);
-                    params.putString("surfaceViewsParams", surfaceViewsParams != null ? surfaceViewsParams.toString() : "null");
+                    params.putString("surfaceViewsParams", 
+                        surfaceViewsParams != null ? surfaceViewsParams.toString() : "null");
                     emitToJS("onMonitorEstablished", params);
+
                     return 0;
                 }
 
@@ -213,11 +231,9 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             @Override
             public void onRtspReady(String rtspUrl) {
                 Log.d("SMARTLOCK", "RTSP Ready: " + rtspUrl + ", deviceId: " + deviceId + ", userId: " + userId);
-                MediaManager.getInstance(reactContext).startMonitorViaLAN(rtspUrl, deviceId);
                 WritableMap params = Arguments.createMap();
                 params.putString("status", "rtspReady");
                 params.putString("rtspUrl", rtspUrl);
-                params.putInt("monitorId", 0); // always 0! not valid for video.
                 emitToJS("onSmartLockRtsp", params);
             }
             @Override
@@ -238,10 +254,15 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         smartLockRtspListener = null;
     }
 
+    // Only call after receiving a valid RTSP URL from 'onSmartLockRtsp'
     @ReactMethod
-    public void prepareVideoStart(String deviceId) {
-        Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId);
-        MediaManager.getInstance(reactContext).prepareVideoStart(deviceId);
+    public void prepareVideoStart(String deviceId, String rtspUrl, String ciphertext) {
+        Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId + ", rtspUrl: " + rtspUrl + ", ciphertext: " + ciphertext);
+        int result = MediaManager.getInstance(reactContext).prepareVideoStart(deviceId);
+        Log.d("SMARTLOCK", "prepareVideoStart result: " + result);
+        String rtspUrll = "rtsp://admin:admin@192.168.1.103:554/Stream1";
+        // Only call startMonitor; do not use monitorId from rtspReady event!
+        MediaManager.getInstance(reactContext).startMonitor(rtspUrll, "");
     }
 
     @ReactMethod
@@ -253,6 +274,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void finishMonitor(int monitorId) {
         Log.d("SMARTLOCK", "finishMonitor called: " + monitorId);
+        SmartLockVideoCache.remove(monitorId);
         MediaManager.getInstance(reactContext).finishMonitor(monitorId);
     }
 

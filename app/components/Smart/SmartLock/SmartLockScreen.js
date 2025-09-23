@@ -17,7 +17,7 @@ export default function SmartLockScreen() {
   const residenceId = 'r45844047053e43d78fe5272c5badbd3a';
   const userId = 'a9b41de81c3284515a5e833d53412fe14';
   const deviceId = 'd17a685f1c5dd4aa893cda99623df553e';
-  const deviceIp = '192.168.1.105';
+  const deviceIp = '192.168.1.100';
   const wanRtspUrl = 'rtsp://rtsp-a.ecloud.akubela.com:10554/507B91E14E64';
   const wanCiphertext = 'mUud6jHgyOriMe31CM4YdN4wBdaPnUSPB34SX17EBxUU4y74REq8CPyGxOAVdgOxR4v/c7yUd6oILUpZ21pTLsr1OE3tN2GOFmTW+VSaQRRS6KbjskTAvbhLumJ6hVBDcpYWwDgatX9EGCFmZ0svKQ==';
 
@@ -30,14 +30,20 @@ export default function SmartLockScreen() {
   const [lastEvent, setLastEvent] = useState('');
   const [surfaceViewInfo, setSurfaceViewInfo] = useState('');
   const [videoError, setVideoError] = useState('');
+  const [lanRtspUrl, setLanRtspUrl] = useState('');
 
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(Akuvox);
 
-    // LAN RTSP event (debug only, ignore monitorId here!)
+    // LAN RTSP event (ignore monitorId here, use only rtspUrl)
     const lanSub = eventEmitter.addListener('onSmartLockRtsp', event => {
       console.log('Received LAN RTSP Event:', event);
       setLastEvent('onSmartLockRtsp: ' + JSON.stringify(event, null, 2));
+      if (event && event.status === 'rtspReady' && event.rtspUrl) {
+        setLanRtspUrl(event.rtspUrl);
+        // Only call prepareVideoStart after getting rtspUrl from this event
+        safeCall('prepareVideoStart', [deviceId, event.rtspUrl, wanCiphertext], 'Failed to prepare video for LAN');
+      }
       if (event && event.status === 'rtspStop') {
         setIsMonitoring(false);
         setMonitorId(null);
@@ -136,13 +142,16 @@ export default function SmartLockScreen() {
     });
   };
 
+  // LAN Monitoring: Set listener first. Only call prepareVideoStart after getting rtspUrl from event.
   const handleStartLanMonitor = () => {
     if (isMonitoring || loading) return;
     setLoading(true);
     setMonitorType('lan');
     setVideoError('');
-    safeCall('prepareVideoStart', [deviceId], 'Failed to prepare video for LAN');
     safeCall('setRtspMessageListener', [deviceId, userId], 'Failed to set LAN RTSP listener', () => setLoading(false));
+    // prepareVideoStart will be called automatically from onSmartLockRtsp event when rtspUrl is available
+    // Try calling prepareVideoStart immediately for debug:
+  safeCall('prepareVideoStart', [deviceId, "", ""], 'Failed to prepare video for LAN');
   };
 
   const handleStartWanMonitor = async () => {
