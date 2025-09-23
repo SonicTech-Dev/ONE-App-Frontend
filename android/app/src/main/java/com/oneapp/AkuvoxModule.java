@@ -257,12 +257,11 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     // Only call after receiving a valid RTSP URL from 'onSmartLockRtsp'
     @ReactMethod
     public void prepareVideoStart(String deviceId, String rtspUrl, String ciphertext) {
-        Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId + ", rtspUrl: " + rtspUrl + ", ciphertext: " + ciphertext);
+        String fixedUrl = "rtsp://admin:admin@192.168.1.103:554/Stream1"; // or get this from JS/props
+        Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId + ", rtspUrl: " + fixedUrl + ", ciphertext: " + ciphertext);
         int result = MediaManager.getInstance(reactContext).prepareVideoStart(deviceId);
         Log.d("SMARTLOCK", "prepareVideoStart result: " + result);
-        String rtspUrll = "rtsp://admin:admin@192.168.1.103:554/Stream1";
-        // Only call startMonitor; do not use monitorId from rtspReady event!
-        MediaManager.getInstance(reactContext).startMonitor(rtspUrll, "");
+        MediaManager.getInstance(reactContext).startMonitor(fixedUrl, "");
     }
 
     @ReactMethod
