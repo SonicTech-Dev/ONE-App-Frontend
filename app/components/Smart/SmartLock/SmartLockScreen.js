@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Button, Alert, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Button, Alert, StyleSheet, ScrollView, Platform } from 'react-native';
 import { NativeModules, NativeEventEmitter } from 'react-native';
 import { requireNativeComponent } from 'react-native';
 
@@ -13,11 +13,11 @@ function checkMethod(name) {
 }
 
 export default function SmartLockScreen() {
-  // Device and demo config
+  // Device config
   const residenceId = 'r45844047053e43d78fe5272c5badbd3a';
   const userId = 'a9b41de81c3284515a5e833d53412fe14';
   const deviceId = 'd17a685f1c5dd4aa893cda99623df553e';
-  const deviceIp = '192.168.1.103';
+  const deviceIp = '192.168.1.102';
   const wanRtspUrl = 'rtsp://rtsp-a.ecloud.akubela.com:10554/507B91E14E64';
   const wanCiphertext = 'mUud6jHgyOriMe31CM4YdN4wBdaPnUSPB34SX17EBxUU4y74REq8CPyGxOAVdgOxR4v/c7yUd6oILUpZ21pTLsr1OE3tN2GOFmTW+VSaQRRS6KbjskTAvbhLumJ6hVBDcpYWwDgatX9EGCFmZ0svKQ==';
 
@@ -32,17 +32,24 @@ export default function SmartLockScreen() {
   const [videoError, setVideoError] = useState('');
   const [lanRtspUrl, setLanRtspUrl] = useState('');
 
+  // Step 1 - Set up event listeners
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(Akuvox);
 
-    // LAN RTSP event (ignore monitorId here, use only rtspUrl)
+    // LAN RTSP listener
     const lanSub = eventEmitter.addListener('onSmartLockRtsp', event => {
       console.log('Received LAN RTSP Event:', event);
       setLastEvent('onSmartLockRtsp: ' + JSON.stringify(event, null, 2));
       if (event && event.status === 'rtspReady' && event.rtspUrl) {
         setLanRtspUrl(event.rtspUrl);
-        // Only call prepareVideoStart after getting rtspUrl from this event
-        safeCall('prepareVideoStart', [deviceId, event.rtspUrl, wanCiphertext], 'Failed to prepare video for LAN');
+        safePromiseCall('startMonitorViaLAN', [event.rtspUrl, deviceId], 'Failed to start LAN monitoring')
+          .then(res => {
+            setLoading(false);
+            if (!res || !res.monitorId || res.monitorId <= 0) {
+              setVideoError('Failed to start LAN monitor');
+            }
+            // Do NOT set monitorId here; handled in onMonitorEstablished
+          });
       }
       if (event && event.status === 'rtspStop') {
         setIsMonitoring(false);
@@ -52,43 +59,43 @@ export default function SmartLockScreen() {
       }
     });
 
-    // Only use monitorId from here!
+    // Monitor Established (authoritative monitorId)
     const establishedSub = eventEmitter.addListener('onMonitorEstablished', event => {
       console.log('onMonitorEstablished:', event);
       setLastEvent('onMonitorEstablished: ' + JSON.stringify(event, null, 2));
-      if (event && typeof event.monitorId === 'number' && event.monitorId > 0) {
-        setMonitorId(event.monitorId);
+      if (event && event.monitorId > 0) {
+        setMonitorId(event.monitorId); // Always set monitorId here
         setIsMonitoring(true);
-        setMonitorType('lan');
+        setMonitorType(prev => prev || 'lan');
         setLoading(false);
         setVideoError('');
-      } else {
-        setVideoError('Monitor established event received but monitorId was not valid.');
       }
+      setSurfaceViewInfo(event ? event.surfaceViewsParams : '');
     });
 
-    // SDK callback for surface view (for debug)
+    // SurfaceView params
     const surfaceViewSub = eventEmitter.addListener('onMonitorLoadSurfaceView', event => {
       console.log('onMonitorLoadSurfaceView:', event);
       setLastEvent('onMonitorLoadSurfaceView: ' + JSON.stringify(event, null, 2));
       setSurfaceViewInfo(event ? event.surfaceViewsParams : '');
     });
 
-    // WAN monitor
+    // WAN monitor started (do not set monitorId here)
     const wanSub = eventEmitter.addListener('onWanMonitorStarted', event => {
       console.log('Received WAN Monitor Event:', event);
       setLastEvent('onWanMonitorStarted: ' + JSON.stringify(event, null, 2));
-      if (event && event.monitorId > 0) {
-        setMonitorId(event.monitorId);
-        setIsMonitoring(true);
-        setMonitorType('wan');
-        setLoading(false);
-        setVideoError('');
-      } else {
+      if (!event || event.monitorId <= 0) {
         setLoading(false);
         setVideoError('WAN Monitor Error: Failed to start WAN monitoring.');
         Alert.alert('WAN Monitor Error', 'Failed to start WAN monitoring');
       }
+      // MonitorId will be set in onMonitorEstablished
+    });
+
+    // RTSP error
+    const rtspErrorSub = eventEmitter.addListener('onRtspError', event => {
+      setVideoError(`RTSP error: ${event.error || 'Unknown error'}`);
+      setLoading(false);
     });
 
     return () => {
@@ -96,10 +103,10 @@ export default function SmartLockScreen() {
       establishedSub.remove();
       surfaceViewSub.remove();
       wanSub.remove();
+      rtspErrorSub.remove();
     };
-  }, []);
+  }, []); // Remove [monitorType] dependency, ensures listeners register only once
 
-  // Defensive wrappers
   const safeCall = useCallback((fn, args, alertMsg = '', onError = () => {}) => {
     try {
       checkMethod(fn);
@@ -112,7 +119,6 @@ export default function SmartLockScreen() {
     }
   }, []);
 
-  // For promise-based calls (WAN)
   const safePromiseCall = useCallback(async (fn, args, alertMsg = '', onError = () => {}) => {
     try {
       checkMethod(fn);
@@ -142,16 +148,14 @@ export default function SmartLockScreen() {
     });
   };
 
-  // LAN Monitoring: Set listener first. Only call prepareVideoStart after getting rtspUrl from event.
+  // LAN Monitoring: Set listener, then call prepareVideoStart, wait for RTSP, then call startMonitorViaLAN
   const handleStartLanMonitor = () => {
     if (isMonitoring || loading) return;
     setLoading(true);
     setMonitorType('lan');
     setVideoError('');
     safeCall('setRtspMessageListener', [deviceId, userId], 'Failed to set LAN RTSP listener', () => setLoading(false));
-    // prepareVideoStart will be called automatically from onSmartLockRtsp event when rtspUrl is available
-    // Try calling prepareVideoStart immediately for debug:
-  safeCall('prepareVideoStart', [deviceId, "", ""], 'Failed to prepare video for LAN');
+    safeCall('prepareVideoStart', [deviceId], 'Failed to prepare video start', () => setLoading(false));
   };
 
   const handleStartWanMonitor = async () => {
@@ -167,6 +171,7 @@ export default function SmartLockScreen() {
         setVideoError('Native failed to start WAN monitoring.');
         Alert.alert('WAN Monitor Error', 'Native failed to start WAN monitoring');
       }
+      // MonitorId will be set in onMonitorEstablished
     } catch (err) {
       setLoading(false);
       setVideoError('Native error starting WAN monitor: ' + (err.message || 'Unknown error'));
@@ -203,9 +208,8 @@ export default function SmartLockScreen() {
       return (
         <View style={styles.videoContainer}>
           <SmartLockMonitorView
-            style={{ flex: 1, width: '100%' }}
+            style={styles.nativeVideo}
             monitorId={monitorId}
-            // Add other props if needed for debugging
           />
           <Text style={styles.monitorType}>
             Type: {monitorType === 'wan' ? 'WAN' : 'LAN'} Monitoring
@@ -257,7 +261,6 @@ export default function SmartLockScreen() {
         <Text style={{ color: '#666', marginTop: 16 }}>Processing...</Text>
       )}
 
-      {/* Show monitorId and debugging info */}
       <View style={styles.debugBox}>
         <Text style={styles.debugTitle}>Debug Info</Text>
         <Text>monitorId: {String(monitorId)}</Text>
@@ -269,7 +272,6 @@ export default function SmartLockScreen() {
         ) : null}
       </View>
 
-      {/* Video Area */}
       {renderVideoArea()}
 
       <View style={{ height: 32 }} />
@@ -282,14 +284,21 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 24 },
   status: { fontSize: 18, color: '#38a169', marginTop: 12 },
   videoContainer: {
-    flex: 1,
-    marginTop: 24,
+    width: '100%',
+    aspectRatio: 1.6, // Or use a fixed height if you know your video aspect
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#222',
-    minHeight: 200,
+    marginTop: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  nativeVideo: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200,
+    backgroundColor: '#111',
+    borderRadius: 12,
   },
   monitorType: {
     color: '#fff',
@@ -323,6 +332,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: '#4a5568',
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
 });

@@ -9,7 +9,7 @@ export const controlDevice = async (
   LAN_HEADERS
 ) => {
   if (selectedOption === 'LAN') {
-    const lanApiUrl = `http://192.168.1.101/api/v1.0/device`;
+    const lanApiUrl = `http://192.168.1.125/api/v1.0/device`;
     const body = {
       command: "control_device",
       id: "c45e846ca23ab42c9ae469d988ae32a96",
@@ -83,7 +83,7 @@ export const deviceStatus = async (
   LAN_HEADERS
 ) => {
   if (selectedOption === 'LAN') {
-    const lanApiUrl = `http://192.168.1.101/api/v1.0/device`;
+    const lanApiUrl = `http://192.168.1.125/api/v1.0/device`;
     const body = {
       command: 'get_device_info',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',

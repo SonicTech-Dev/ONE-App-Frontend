@@ -59,13 +59,15 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 @Override
                 public int rtspMessageErrorMonitor(String error) {
                     Log.e("SIP", "RTSP error: " + error);
+                    WritableMap params = Arguments.createMap();
+                    params.putString("error", error);
+                    emitToJS("onRtspError", params);
                     return 0;
                 }
                 @Override
                 public int rtspMessageEstablishedMonitor(int monitorId, SurfaceViewsParams surfaceViewsParams) {
                     Log.d("AkuvoxModule", "rtspMessageEstablishedMonitor called! monitorId=" + monitorId);
 
-                    // Get the SurfaceView from SDK
                     SurfaceView remoteView = MediaManager
                         .getInstance(getReactApplicationContext())
                         .getRemoteVideoView(monitorId);
@@ -79,7 +81,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                         Log.e("AkuvoxModule", "Failed to get remote video view for monitorId=" + monitorId);
                     }
 
-                    // Emit event to JS so RN side knows which monitorId to use
                     WritableMap params = Arguments.createMap();
                     params.putInt("monitorId", monitorId);
                     params.putString("surfaceViewsParams", 
@@ -160,7 +161,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void registerSip(String ciphertext, String displayName, Promise promise) {
         try {
-            MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_TLS);
+            MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_UDP);
             int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
             MediaManager.getInstance(reactContext).setSipBackendOnline(true);
 
@@ -203,27 +204,8 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         MediaManager.getInstance(reactContext).answerCall(callId, 1);
     }
 
-    // ---------------- SMART LOCK SDK EXTENSIONS ---------------- //
+    // ---------------- SMART LOCK LAN MONITORING FLOW ---------------- //
 
-    @ReactMethod
-    public void initLockConfig(String residenceId, String userId, String deviceId, String deviceIp) {
-        Log.d("SMARTLOCK", "initLockConfig called: " + residenceId + ", " + userId + ", " + deviceId + ", " + deviceIp);
-        MediaManager.getInstance(reactContext).initLockConfig(residenceId, userId, deviceId, deviceIp);
-    }
-
-    @ReactMethod
-    public void unlockViaLAN(String deviceId, final Callback callback) {
-        Log.d("SMARTLOCK", "unlockViaLAN called: " + deviceId);
-        MediaManager.getInstance(reactContext).unlockViaLAN(deviceId, new IRequestListener<Boolean>() {
-            @Override
-            public void onResult(Boolean success) {
-                Log.d("SMARTLOCK", "Unlock result: " + success);
-                callback.invoke(success);
-            }
-        });
-    }
-
-    // Only signal 'rtspReady' to JS, but do NOT include a monitorId for video!
     @ReactMethod
     public void setRtspMessageListener(final String deviceId, final String userId) {
         Log.d("SMARTLOCK", "setRtspMessageListener called for deviceId: " + deviceId + ", userId: " + userId);
@@ -254,14 +236,30 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         smartLockRtspListener = null;
     }
 
-    // Only call after receiving a valid RTSP URL from 'onSmartLockRtsp'
+    // Per SDK: prepareVideoStart immediately after setting listener, only needs deviceId
     @ReactMethod
-    public void prepareVideoStart(String deviceId, String rtspUrl, String ciphertext) {
-        String fixedUrl = "rtsp://admin:admin@192.168.1.103:554/Stream1"; // or get this from JS/props
-        Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId + ", rtspUrl: " + fixedUrl + ", ciphertext: " + ciphertext);
+    public void prepareVideoStart(String deviceId) {
+        Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId);
         int result = MediaManager.getInstance(reactContext).prepareVideoStart(deviceId);
         Log.d("SMARTLOCK", "prepareVideoStart result: " + result);
-        MediaManager.getInstance(reactContext).startMonitor(fixedUrl, "");
+    }
+
+    // Per SDK: after receiving RTSP URL, start monitor using startMonitorViaLAN
+    @ReactMethod
+    public void startMonitorViaLAN(String rtspUrl, String deviceId, Promise promise) {
+        try {
+            Log.d("SMARTLOCK", "startMonitorViaLAN called: rtspUrl=" + rtspUrl + ", deviceId=" + deviceId);
+            int monitorId = MediaManager.getInstance(reactContext).startMonitorViaLAN(rtspUrl, deviceId);
+            Log.d("SMARTLOCK", "startMonitorViaLAN returned monitorId: " + monitorId);
+            WritableMap params = Arguments.createMap();
+            params.putInt("monitorId", monitorId);
+            params.putString("rtspUrl", rtspUrl);
+            promise.resolve(params);
+            emitToJS("onMonitorEstablished", params);
+        } catch (Exception e) {
+            Log.e("SMARTLOCK", "startMonitorViaLAN exception: " + e.getMessage(), e);
+            promise.reject("MONITOR_ERROR", e.getMessage());
+        }
     }
 
     @ReactMethod
@@ -277,6 +275,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         MediaManager.getInstance(reactContext).finishMonitor(monitorId);
     }
 
+    // WAN monitor (unchanged)
     @ReactMethod
     public void startWanMonitor(String rtspUrl, String ciphertext, Promise promise) {
         try {
@@ -292,5 +291,23 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             Log.e("WAN_MONITOR", "startWanMonitor exception: " + e.getMessage(), e);
             promise.reject("WAN_MONITOR_ERROR", e.getMessage());
         }
+    }
+
+    @ReactMethod
+    public void initLockConfig(String residenceId, String userId, String deviceId, String deviceIp) {
+        Log.d("SMARTLOCK", "initLockConfig called: " + residenceId + ", " + userId + ", " + deviceId + ", " + deviceIp);
+        MediaManager.getInstance(reactContext).initLockConfig(residenceId, userId, deviceId, deviceIp);
+    }
+
+    @ReactMethod
+    public void unlockViaLAN(String deviceId, final Callback callback) {
+        Log.d("SMARTLOCK", "unlockViaLAN called: " + deviceId);
+        MediaManager.getInstance(reactContext).unlockViaLAN(deviceId, new IRequestListener<Boolean>() {
+            @Override
+            public void onResult(Boolean success) {
+                Log.d("SMARTLOCK", "Unlock result: " + success);
+                callback.invoke(success);
+            }
+        });
     }
 }

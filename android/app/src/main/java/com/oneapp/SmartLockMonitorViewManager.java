@@ -10,10 +10,6 @@ import com.facebook.react.uimanager.SimpleViewManager;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
 
-/**
- * SmartLockMonitorViewManager for React Native <SmartLockMonitorView/>
- * Attaches remote video SurfaceView for smart lock LAN monitoring sessions.
- */
 public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> {
     public static final String REACT_CLASS = "SmartLockMonitorView";
 
@@ -24,13 +20,11 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
 
     @Override
     protected FrameLayout createViewInstance(ThemedReactContext reactContext) {
-        return new FrameLayout(reactContext);
+        FrameLayout layout = new FrameLayout(reactContext);
+        layout.setBackgroundColor(0xFFFF0000); // Red background for debug, remove in prod
+        return layout;
     }
 
-    /**
-     * Attach remote video view for LAN monitor session.
-     * Pass monitorId from JS as prop.
-     */
     @ReactProp(name = "monitorId")
     public void setMonitorId(FrameLayout view, int monitorId) {
         Context context = view.getContext();
@@ -42,7 +36,6 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
                 SurfaceView remoteView = SmartLockVideoCache.get(monitorId);
                 Log.d(REACT_CLASS, "Fetched SurfaceView for monitorId: " + monitorId + " = " + remoteView);
                 if (remoteView != null) {
-                    // Remove from any previous parent
                     ViewGroup parent = (ViewGroup) remoteView.getParent();
                     if (parent != null) {
                         parent.removeView(remoteView);
@@ -52,6 +45,16 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.MATCH_PARENT
                         ));
+                        // Log size after layout pass
+                        remoteView.post(() -> {
+                            Log.d(REACT_CLASS, "SurfaceView attached size: " +
+                                remoteView.getWidth() + "x" + remoteView.getHeight());
+                        });
+                        // Add delayed log to check if layout changes after some time
+                        remoteView.postDelayed(() -> {
+                            Log.d(REACT_CLASS, "SurfaceView size after delay: " +
+                                remoteView.getWidth() + "x" + remoteView.getHeight());
+                        }, 500);
                         Log.d(REACT_CLASS, "Smart lock remote video view attached for monitorId: " + monitorId);
                     });
                 } else {

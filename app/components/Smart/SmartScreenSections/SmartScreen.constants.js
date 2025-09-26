@@ -639,9 +639,3 @@ export const INITIAL_DEVICE_CATEGORIES = [
         ],
       },  
 ];
-
-export const LAN_HEADERS = {
-  "Content-Type": "application/json",
-  "Accept": "application/json",
-  "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIyNDBmOTE4NmUwMzk0ZGM1OGU3NDA4MDQ0NmFmYzk2NCIsImlhdCI6MTc1NzY3NTkxNywiZXhwIjoxNzg5MjExOTE3fQ.g-fU0t-1MWWMTXI3s4JaDVIjFQMjHifbnK8Cao9WBg0"
-};

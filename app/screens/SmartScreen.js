@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Animated, Alert } from 'react-native';
 import Header from '../components/Smart/Header';
 import StatsSection from '../components/Smart/StatsSection';
@@ -7,19 +7,34 @@ import Screen from '../components/Screen';
 import useColors from '../hooks/useColors';
 import DevicModal from '../components/Modal';
 
-import { INITIAL_DEVICE_CATEGORIES, LAN_HEADERS } from '../components/Smart/SmartScreenSections/SmartScreen.constants';
+import { INITIAL_DEVICE_CATEGORIES } from '../components/Smart/SmartScreenSections/SmartScreen.constants';
 import { controlDevice, deviceStatus } from '../components/Smart/SmartScreenSections/api';
 import styles from '../components/Smart/SmartScreenSections/SmartScreen.styles';
 import DeviceGrid from '../components/Smart/SmartScreenSections/DeviceGrid';
 
+import { buildLanHeaders } from '../components/Smart/SmartScreenSections/auth';
+
 export default function SmartScreen({ navigation }) {
-  const [selectedOption, setSelectedOption] = useState('WAN');
+  const [selectedOption, setSelectedOption] = useState('LAN');
   const [deviceCategories, setDeviceCategories] = useState(INITIAL_DEVICE_CATEGORIES);
   const scrollY = useRef(new Animated.Value(0)).current;
   const colors = useColors();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [selectedDeviceStatus, setSelectedDeviceStatus] = useState(null);
+  const [lanHeaders, setLanHeaders] = useState(null);
+
+  useEffect(() => {
+    async function fetchHeaders() {
+      try {
+        const headers = await buildLanHeaders();
+        setLanHeaders(headers);
+      } catch (e) {
+        Alert.alert('Token Error', 'Failed to fetch access token.');
+      }
+    }
+    fetchHeaders();
+  }, []);
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, 200],
@@ -41,21 +56,20 @@ export default function SmartScreen({ navigation }) {
   const handleTabChange = (tab) => setActiveTab(tab);
 
   useEffect(() => {
-    if (modalVisible && selectedDevice) {
+    if (modalVisible && selectedDevice && lanHeaders) {
       const mode = selectedOption.toLowerCase();
       const dev = selectedDevice[mode];
       if (!dev) {
         setSelectedDeviceStatus(null);
         return;
       }
-      deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, LAN_HEADERS);
+      deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, lanHeaders);
     } else {
       setSelectedDeviceStatus(null);
     }
-  }, [modalVisible, selectedDevice, selectedOption]);
+  }, [modalVisible, selectedDevice, selectedOption, lanHeaders]);
 
-  // Device control handlers
-  const handleToggle = (device, newControl) => {
+  const handleToggle = async (device, newControl) => {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
@@ -74,11 +88,12 @@ export default function SmartScreen({ navigation }) {
       }))
     );
     const command = dev.commandPair[newControl];
-    controlDevice(dev.device_id, dev.ability_id, command, null, selectedOption, LAN_HEADERS);
-    deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, LAN_HEADERS);
+    const headers = lanHeaders || (await buildLanHeaders());
+    controlDevice(dev.device_id, dev.ability_id, command, null, selectedOption, headers);
+    deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, headers);
   };
 
-  const handleSetPosition = (device, position) => {
+  const handleSetPosition = async (device, position) => {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
@@ -89,10 +104,11 @@ export default function SmartScreen({ navigation }) {
     const attribute = mode === 'lan'
       ? { position }
       : { position_percent: position };
-    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, LAN_HEADERS);
+    const headers = lanHeaders || (await buildLanHeaders());
+    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
-  const handleSetTemperature = (device, temperature) => {
+  const handleSetTemperature = async (device, temperature) => {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
@@ -103,10 +119,11 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { preset_temperature: temperature };
     const command = dev.commandPair['on'];
-    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, LAN_HEADERS);
+    const headers = lanHeaders || (await buildLanHeaders());
+    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
-  const handleSetHVACMode = (device, HVACmode, temperature) => {
+  const handleSetHVACMode = async (device, HVACmode, temperature) => {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
@@ -117,10 +134,11 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { hvac_mode: HVACmode };
     const command = dev.commandPair['on'];
-    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, LAN_HEADERS);
+    const headers = lanHeaders || (await buildLanHeaders());
+    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
-  const handleSetFanSpeed = (device, speed, temperature) => {
+  const handleSetFanSpeed = async (device, speed, temperature) => {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
@@ -131,10 +149,11 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { fan_mode: speed };
     const command = dev.commandPair['on'];
-    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, LAN_HEADERS);
+    const headers = lanHeaders || (await buildLanHeaders());
+    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
-  const handleSetBrightness = (device, Brightness) => {
+  const handleSetBrightness = async (device, Brightness) => {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
@@ -145,7 +164,8 @@ export default function SmartScreen({ navigation }) {
       ? { brightness_pct: Brightness }
       : { brightness: Brightness };
     const command = dev.commandPair['on'];
-    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, LAN_HEADERS);
+    const headers = lanHeaders || (await buildLanHeaders());
+    controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
   return (
