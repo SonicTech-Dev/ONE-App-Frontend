@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Button, Alert, StyleSheet, ScrollView, Platform } from 'react-native';
 import { NativeModules, NativeEventEmitter } from 'react-native';
-import { requireNativeComponent } from 'react-native';
+// import { requireNativeComponent } from 'react-native'; // Not needed for RTSPViewer
+import RTSPViewer from './RTSPViewer'; // <-- Import your RTSPViewer component
 
 const { Akuvox } = NativeModules;
-const SmartLockMonitorView = requireNativeComponent('SmartLockMonitorView');
+// const SmartLockMonitorView = requireNativeComponent('SmartLockMonitorView'); // Keep but commented
 
 function checkMethod(name) {
   if (!Akuvox || typeof Akuvox[name] !== 'function') {
@@ -17,31 +18,35 @@ export default function SmartLockScreen() {
   const residenceId = 'r45844047053e43d78fe5272c5badbd3a';
   const userId = 'a9b41de81c3284515a5e833d53412fe14';
   const deviceId = 'd17a685f1c5dd4aa893cda99623df553e';
-  const deviceIp = '192.168.1.102';
+  const deviceIp = '192.168.1.101';
+  const lanRtspUrl = 'rtsp://admin:Sonic123@192.168.1.104:554/cam/realmonitor?channel=1&subtype=0'; // <-- Use your LAN RTSP URL
   const wanRtspUrl = 'rtsp://rtsp-a.ecloud.akubela.com:10554/507B91E14E64';
   const wanCiphertext = 'mUud6jHgyOriMe31CM4YdN4wBdaPnUSPB34SX17EBxUU4y74REq8CPyGxOAVdgOxR4v/c7yUd6oILUpZ21pTLsr1OE3tN2GOFmTW+VSaQRRS6KbjskTAvbhLumJ6hVBDcpYWwDgatX9EGCFmZ0svKQ==';
 
   // UI/logic state
   const [isMonitoring, setIsMonitoring] = useState(false);
-  const [monitorId, setMonitorId] = useState(null);
+  // const [monitorId, setMonitorId] = useState(null); // Keep but commented
   const [unlockStatus, setUnlockStatus] = useState(null);
-  const [monitorType, setMonitorType] = useState(null);
+  // const [monitorType, setMonitorType] = useState(null); // Keep but commented
+  const [monitorType, setMonitorType] = useState(null); // 'lan' or 'wan'
   const [loading, setLoading] = useState(false);
+  // const [surfaceViewInfo, setSurfaceViewInfo] = useState(''); // Keep but commented
   const [lastEvent, setLastEvent] = useState('');
-  const [surfaceViewInfo, setSurfaceViewInfo] = useState('');
   const [videoError, setVideoError] = useState('');
-  const [lanRtspUrl, setLanRtspUrl] = useState('');
+  // const [lanRtspUrlDynamic, setLanRtspUrlDynamic] = useState(''); // Keep but commented
 
-  // Step 1 - Set up event listeners
+  // Step 1 - Set up event listeners (for WAN, debug, unlock, etc.)
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(Akuvox);
 
+    // Uncomment to support dynamic LAN RTSP via event
+    /*
     // LAN RTSP listener
     const lanSub = eventEmitter.addListener('onSmartLockRtsp', event => {
       console.log('Received LAN RTSP Event:', event);
       setLastEvent('onSmartLockRtsp: ' + JSON.stringify(event, null, 2));
       if (event && event.status === 'rtspReady' && event.rtspUrl) {
-        setLanRtspUrl(event.rtspUrl);
+        setLanRtspUrlDynamic(event.rtspUrl);
         safePromiseCall('startMonitorViaLAN', [event.rtspUrl, deviceId], 'Failed to start LAN monitoring')
           .then(res => {
             setLoading(false);
@@ -79,10 +84,10 @@ export default function SmartLockScreen() {
       setLastEvent('onMonitorLoadSurfaceView: ' + JSON.stringify(event, null, 2));
       setSurfaceViewInfo(event ? event.surfaceViewsParams : '');
     });
+    */
 
-    // WAN monitor started (do not set monitorId here)
+    // WAN monitor started
     const wanSub = eventEmitter.addListener('onWanMonitorStarted', event => {
-      console.log('Received WAN Monitor Event:', event);
       setLastEvent('onWanMonitorStarted: ' + JSON.stringify(event, null, 2));
       if (!event || event.monitorId <= 0) {
         setLoading(false);
@@ -99,13 +104,13 @@ export default function SmartLockScreen() {
     });
 
     return () => {
-      lanSub.remove();
-      establishedSub.remove();
-      surfaceViewSub.remove();
+      // if (lanSub) lanSub.remove();
+      // if (establishedSub) establishedSub.remove();
+      // if (surfaceViewSub) surfaceViewSub.remove();
       wanSub.remove();
       rtspErrorSub.remove();
     };
-  }, []); // Remove [monitorType] dependency, ensures listeners register only once
+  }, []);
 
   const safeCall = useCallback((fn, args, alertMsg = '', onError = () => {}) => {
     try {
@@ -148,16 +153,26 @@ export default function SmartLockScreen() {
     });
   };
 
-  // LAN Monitoring: Set listener, then call prepareVideoStart, wait for RTSP, then call startMonitorViaLAN
+  // LAN Monitoring: Just show RTSPViewer for the LAN RTSP URL (no SDK calls)
   const handleStartLanMonitor = () => {
     if (isMonitoring || loading) return;
+    setLoading(false); // Not loading, only UI change
+    setMonitorType('lan');
+    setVideoError('');
+    setIsMonitoring(true);
+    // No SDK calls, just show RTSPViewer for LAN
+
+    // Uncomment below to use SDK LAN monitoring logic
+    /*
     setLoading(true);
     setMonitorType('lan');
     setVideoError('');
     safeCall('setRtspMessageListener', [deviceId, userId], 'Failed to set LAN RTSP listener', () => setLoading(false));
     safeCall('prepareVideoStart', [deviceId], 'Failed to prepare video start', () => setLoading(false));
+    */
   };
 
+  // WAN Monitoring: Use original logic
   const handleStartWanMonitor = async () => {
     if (isMonitoring || loading) return;
     setLoading(true);
@@ -172,6 +187,7 @@ export default function SmartLockScreen() {
         Alert.alert('WAN Monitor Error', 'Native failed to start WAN monitoring');
       }
       // MonitorId will be set in onMonitorEstablished
+      setIsMonitoring(true);
     } catch (err) {
       setLoading(false);
       setVideoError('Native error starting WAN monitor: ' + (err.message || 'Unknown error'));
@@ -180,6 +196,15 @@ export default function SmartLockScreen() {
   };
 
   const handleStopMonitor = () => {
+    // Stop monitoring for both LAN and WAN
+    setIsMonitoring(false);
+    setMonitorType(null);
+    setLoading(false);
+    setVideoError('');
+    // For WAN, you may want to call Akuvox.finishMonitor or similar if needed
+
+    // Uncomment below to use SDK stop logic
+    /*
     if (!monitorType || !monitorId) return;
     setLoading(true);
     setVideoError('');
@@ -200,19 +225,21 @@ export default function SmartLockScreen() {
       setVideoError('Error stopping monitor: ' + (err.message || 'Native error'));
       Alert.alert('Stop Monitor Error', err.message || 'Native error');
     }
+    */
   };
 
   // Render video area or error
   const renderVideoArea = () => {
-    if (isMonitoring && monitorId !== null && monitorId > 0) {
+    if (isMonitoring && monitorType === 'lan') {
       return (
         <View style={styles.videoContainer}>
-          <SmartLockMonitorView
+          {/* RTSPViewer: just stream LAN RTSP URL */}
+          <RTSPViewer
+            uri={lanRtspUrl}
             style={styles.nativeVideo}
-            monitorId={monitorId}
           />
           <Text style={styles.monitorType}>
-            Type: {monitorType === 'wan' ? 'WAN' : 'LAN'} Monitoring
+            Type: LAN Monitoring
           </Text>
           {videoError ? (
             <Text style={styles.videoError}>{videoError}</Text>
@@ -220,6 +247,26 @@ export default function SmartLockScreen() {
         </View>
       );
     }
+    // Uncomment below to use SDK view for LAN
+    /*
+    if (isMonitoring && monitorType === 'lan' && monitorId !== null && monitorId > 0) {
+      return (
+        <View style={styles.videoContainer}>
+          <SmartLockMonitorView
+            style={styles.nativeVideo}
+            monitorId={monitorId}
+          />
+          <Text style={styles.monitorType}>
+            Type: LAN Monitoring (SDK)
+          </Text>
+          {videoError ? (
+            <Text style={styles.videoError}>{videoError}</Text>
+          ) : null}
+        </View>
+      );
+    }
+    */
+    // If you want to support WAN, add WAN video logic here
     if (videoError) {
       return (
         <View style={styles.videoContainer}>
@@ -246,13 +293,14 @@ export default function SmartLockScreen() {
             color="#3182ce"
             disabled={loading}
           />
-          <View style={{ height: 12 }} />
+          {/* Uncomment to support WAN monitoring */}
+          {/* <View style={{ height: 12 }} />
           <Button
             title="Start WAN Monitoring"
             onPress={handleStartWanMonitor}
             color="#6b46c1"
             disabled={loading}
-          />
+          /> */}
         </>
       ) : (
         <Button title="Stop Monitoring" onPress={handleStopMonitor} color="#c53030" disabled={loading} />
@@ -263,8 +311,8 @@ export default function SmartLockScreen() {
 
       <View style={styles.debugBox}>
         <Text style={styles.debugTitle}>Debug Info</Text>
-        <Text>monitorId: {String(monitorId)}</Text>
-        {surfaceViewInfo ? <Text>SurfaceView: {surfaceViewInfo}</Text> : null}
+        {/* <Text>monitorId: {String(monitorId)}</Text> */}
+        {/* {surfaceViewInfo ? <Text>SurfaceView: {surfaceViewInfo}</Text> : null} */}
         <Text>Last Native Event:</Text>
         <Text style={styles.debugEvent}>{lastEvent}</Text>
         {videoError ? (

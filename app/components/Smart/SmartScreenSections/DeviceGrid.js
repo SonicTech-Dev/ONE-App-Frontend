@@ -30,13 +30,26 @@ export default function DeviceGrid({
       <View style={styles.sdkTestTileRow}>
         <DeviceTile
           title="Smart Lock Screen"
-          location="Smart Lock Page"
+          location="Intercom Page"
           status=""
           color="#4ac0ff"
           isOn={false}
           iconName="test-tube"
           library="MaterialCommunityIcons"
           onPress={() => navigation.navigate('SmartLockScreen')}
+          disabled={false}
+        />
+      </View>
+      <View style={styles.sdkTestTileRow}>
+        <DeviceTile
+          title="IntercomScreen"
+          location="IntercomScreen"
+          status=""
+          color="#7b888fff"
+          isOn={false}
+          iconName="test-tube"
+          library="MaterialCommunityIcons"
+          onPress={() => navigation.navigate('IntercomScreen')}
           disabled={false}
         />
       </View>

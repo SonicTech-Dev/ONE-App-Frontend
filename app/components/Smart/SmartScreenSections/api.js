@@ -1,4 +1,11 @@
 import { Alert } from 'react-native';
+import { buildLanHeaders } from './auth';
+
+// Helper to fetch LAN headers if not provided (for flexibility)
+const getLanHeaders = async (LAN_HEADERS) => {
+  if (LAN_HEADERS) return LAN_HEADERS;
+  return await buildLanHeaders();
+};
 
 export const controlDevice = async (
   deviceId,
@@ -6,9 +13,12 @@ export const controlDevice = async (
   command,
   attribute,
   selectedOption,
-  LAN_HEADERS
+  LAN_HEADERS // optional, will fetch if not provided
 ) => {
-  if (selectedOption === 'LAN') {
+  // Normalize selectedOption
+  const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
+
+  if (isLAN) {
     const lanApiUrl = `http://192.168.1.125/api/v1.0/device`;
     const body = {
       command: "control_device",
@@ -22,9 +32,10 @@ export const controlDevice = async (
     };
 
     try {
+      const headers = await getLanHeaders(LAN_HEADERS);
       const response = await fetch(lanApiUrl, {
         method: 'POST',
-        headers: LAN_HEADERS,
+        headers,
         body: JSON.stringify(body),
       });
 
@@ -38,7 +49,7 @@ export const controlDevice = async (
       Alert.alert('Error', 'Failed to control device locally.');
     }
   } else {
-    const apiUrl = 'http://10.255.254.61:8000/control_devices/';
+    const apiUrl = 'http://3.227.99.254:8010/control_devices/';
     const body = {
       command: 'batch_control_device',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
@@ -80,9 +91,12 @@ export const deviceStatus = async (
   deviceId,
   selectedOption,
   setSelectedDeviceStatus,
-  LAN_HEADERS
+  LAN_HEADERS // optional, will fetch if not provided
 ) => {
-  if (selectedOption === 'LAN') {
+  // Normalize selectedOption
+  const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
+
+  if (isLAN) {
     const lanApiUrl = `http://192.168.1.125/api/v1.0/device`;
     const body = {
       command: 'get_device_info',
@@ -92,9 +106,10 @@ export const deviceStatus = async (
       },
     };
     try {
+      const headers = await getLanHeaders(LAN_HEADERS);
       const response = await fetch(lanApiUrl, {
         method: 'POST',
-        headers: LAN_HEADERS,
+        headers,
         body: JSON.stringify(body),
       });
 
@@ -110,7 +125,7 @@ export const deviceStatus = async (
       Alert.alert('Error', 'Failed to control device locally.');
     }
   } else {
-    const apiUrl = 'http://10.255.254.61:8000/device_status/';
+    const apiUrl = 'http://3.227.99.254:8010/device_status/';
     const body = {
       command: 'get_device_info',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',

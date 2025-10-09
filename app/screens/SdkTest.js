@@ -118,6 +118,18 @@ export default function SdkContactScreen() {
     }
   };
 
+    const handleRegisterSipLan = async () => {
+    try {
+      const result = await Akuvox.registerSipLan(
+        "4cUSgR92G0HEVtdqewd7AYuI0KWQwB2nk5nrvxIUD3s0kxU/Y/u/GMrpOy/8dgbPjgqHFZLxW2k5qB0vsk2MAnJtJHzgeTWl3i7CADQQ1YE=",
+        "User bela"
+      );
+      Alert.alert('Result', result);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to register SIP');
+    }
+  };
+
   const handleGetSipStatus = async () => {
     try {
       const status = await Akuvox.getSipStatus();
@@ -277,6 +289,7 @@ export default function SdkContactScreen() {
       <View style={styles.topBar}>
         <Button title="Init SDK" onPress={handleInitSdk} color="#2b6cb0" />
         <Button title="Register SIP" onPress={handleRegisterSip} color="#2b6cb0" />
+        <Button title="Register SIP (LAN)" onPress={handleRegisterSipLan} color="#2b6cb0" />
         <Button title="SIP Status" onPress={handleGetSipStatus} color="#2b6cb0" />
       </View>
       <View style={{ paddingHorizontal: 16, marginTop: 8 }}>

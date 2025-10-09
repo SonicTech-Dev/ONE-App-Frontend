@@ -6,13 +6,13 @@ import Tabs from '../components/Smart/Tabs';
 import Screen from '../components/Screen';
 import useColors from '../hooks/useColors';
 import DevicModal from '../components/Modal';
-
+import CallbackServer from '../components/Services/Server';
 import { INITIAL_DEVICE_CATEGORIES } from '../components/Smart/SmartScreenSections/SmartScreen.constants';
 import { controlDevice, deviceStatus } from '../components/Smart/SmartScreenSections/api';
 import styles from '../components/Smart/SmartScreenSections/SmartScreen.styles';
 import DeviceGrid from '../components/Smart/SmartScreenSections/DeviceGrid';
-
 import { buildLanHeaders } from '../components/Smart/SmartScreenSections/auth';
+import CallbackRegistration from '../components/Services/CallbackRegister';
 
 export default function SmartScreen({ navigation }) {
   const [selectedOption, setSelectedOption] = useState('LAN');
@@ -23,18 +23,72 @@ export default function SmartScreen({ navigation }) {
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [selectedDeviceStatus, setSelectedDeviceStatus] = useState(null);
   const [lanHeaders, setLanHeaders] = useState(null);
+  const [callbackRegistered, setCallbackRegistered] = useState(false);
 
   useEffect(() => {
-    async function fetchHeaders() {
-      try {
-        const headers = await buildLanHeaders();
-        setLanHeaders(headers);
-      } catch (e) {
-        Alert.alert('Token Error', 'Failed to fetch access token.');
+    console.log('[SmartScreen] selectedOption:', selectedOption);
+    console.log('[SmartScreen] lanHeaders:', lanHeaders);
+    console.log('[SmartScreen] callbackRegistered:', callbackRegistered);
+  }, [selectedOption, lanHeaders, callbackRegistered]);
+
+  useEffect(() => {
+    if (selectedOption === 'LAN') {
+      if (!lanHeaders) {
+        async function fetchHeaders() {
+          try {
+            const headers = await buildLanHeaders();
+            console.log('[SmartScreen] buildLanHeaders result:', headers);
+            setLanHeaders(headers);
+          } catch (e) {
+            Alert.alert('Token Error', 'Failed to fetch access token.');
+          }
+        }
+        fetchHeaders();
       }
+    } else {
+      setLanHeaders(null);
+      setCallbackRegistered(false); // reset registration if leaving LAN
     }
-    fetchHeaders();
-  }, []);
+  }, [selectedOption]);
+
+  useEffect(() => {
+    if (
+      selectedOption === 'LAN' &&
+      lanHeaders &&
+      lanHeaders.token &&
+      !callbackRegistered
+    ) {
+      console.log('[SmartScreen] Ready to register callback!');
+    }
+  }, [selectedOption, lanHeaders, callbackRegistered]);
+
+  // This function updates device state based on callback payload
+  const handleRequest = (req, payload) => {
+    console.log('Callback API received:', { req, payload });
+
+    // Check payload structure (e.g., event_type, device data)
+    if (
+      payload?.event_type === 'device' &&
+      payload?.data?.payload?.device_id &&
+      Array.isArray(payload?.data?.payload?.abilities)
+    ) {
+      payload.data.payload.abilities.forEach((ability) => {
+        const deviceId = payload.data.payload.device_id;
+        const state = ability.state; // "on" or "off"
+        // Update deviceCategories state for LAN devices
+        setDeviceCategories((prevCats) =>
+          prevCats.map((cat) => ({
+            ...cat,
+            items: cat.items.map((d) =>
+              d.lan?.device_id === deviceId
+                ? { ...d, isOn: state === "on", status: state === "on" ? "On" : "Off" }
+                : d
+            ),
+          }))
+        );
+      });
+    }
+  };
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, 200],
@@ -88,8 +142,8 @@ export default function SmartScreen({ navigation }) {
       }))
     );
     const command = dev.commandPair[newControl];
-    const headers = lanHeaders || (await buildLanHeaders());
-    controlDevice(dev.device_id, dev.ability_id, command, null, selectedOption, headers);
+    const headers = lanHeaders;
+    controlDevice(dev.device_id, dev.ability_id, command, null, selectedOption);
     deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, headers);
   };
 
@@ -177,6 +231,26 @@ export default function SmartScreen({ navigation }) {
       <Animated.View style={[styles.tabsContainer, { transform: [{ translateY: tabsTranslateY }] }]}>
         <Tabs tabs={categories.map((c) => c.category)} onTabChange={handleTabChange} activeTab={activeTab} />
       </Animated.View>
+
+      {/* LAN Server for API */}
+      <CallbackServer port={8080} onRequest={handleRequest} />
+
+      {/* Callback Registration: only run after token is available */}
+      {selectedOption === 'LAN' && !!lanHeaders?.token && !callbackRegistered && (
+        <CallbackRegistration
+          deviceCallbackUrl="http://192.168.1.125/api/v1.0/callback"
+          callbackUrl="http://192.168.1.150:8080/"
+          token={lanHeaders?.Authorization?.replace('Bearer ', '')}
+          callbackId="c45e846ca23ab42c9ae469d988ae32a96"
+          listenList={['device']}
+          run={selectedOption === 'LAN' && !!lanHeaders?.Authorization && !callbackRegistered}
+          onStatus={(status, res) => {
+            if (status === 'success') setCallbackRegistered(true);
+            if (status === 'error') Alert.alert('Callback Registration Error', res);
+          }}
+        />
+      )}
+
       <DeviceGrid
         filteredDevices={filteredDevices}
         handleToggle={handleToggle}

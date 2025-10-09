@@ -4,6 +4,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import SmartScreen from "../../screens/SmartScreen";
 import SdkTest from "../../screens/SdkTest"; // <-- Import your SDK Usage screen
 import SmartLockScreen from "../../components/Smart/SmartLock/SmartLockScreen";
+import IntercomScreen from "../../components/Smart/Intercom/Intercom"
 const Stack = createStackNavigator();
 
 const SmartNavigator = ({ route, navigation }) => {
@@ -34,6 +35,15 @@ const SmartNavigator = ({ route, navigation }) => {
         options={{
           headerShown: true,
           title: "SL50 Smart Lock",
+          headerTitleStyle: { color: 'black' },
+        }}
+        />
+      <Stack.Screen
+        name="IntercomScreen"
+        component={IntercomScreen}
+        options={{
+          headerShown: true,
+          title: "R29 Intercom",
           headerTitleStyle: { color: 'black' },
         }}
       />

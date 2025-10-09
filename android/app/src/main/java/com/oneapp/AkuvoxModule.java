@@ -117,7 +117,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     params.putInt("callId", callData.callId);
                     params.putString("remoteUserName", callData.remoteUserName);
                     params.putString("remoteDisplayName", callData.remoteDisplayName);
-                    params.putInt("callVideoMode", callData.callVideoMode);
                     emitToJS("onIncomingCall", params);
                     return 0;
                 }
@@ -158,8 +157,27 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         MediaManager.getInstance(reactContext).initMedia(reactContext);
     }
 
-    @ReactMethod
+    /*@ReactMethod
     public void registerSip(String ciphertext, String displayName, Promise promise) {
+        try {
+            MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_TLS);
+            int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
+            MediaManager.getInstance(reactContext).setSipBackendOnline(true);
+
+            if (result == 0) {
+                promise.resolve("SIP account registered successfully.");
+                Log.d("SIP", "App registered with account: " + displayName + " / " + ciphertext);
+
+            } else {
+                promise.reject("REGISTER_ERROR", "setSipAccount returned error code: " + result);
+            }
+        } catch (Exception e) {
+            promise.reject("REGISTER_EXCEPTION", e.getMessage());
+        }
+    }*/
+
+    @ReactMethod
+    public void registerSipLan(String ciphertext, String displayName, Promise promise) {
         try {
             MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_UDP);
             int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
@@ -167,6 +185,8 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
 
             if (result == 0) {
                 promise.resolve("SIP account registered successfully.");
+                Log.d("SIP", "App registered with account: " + displayName + " / " + ciphertext);
+
             } else {
                 promise.reject("REGISTER_ERROR", "setSipAccount returned error code: " + result);
             }
@@ -191,6 +211,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         makeCallBean.remoteUserName = remoteUserName;
         makeCallBean.remoteDisplayName = remoteDisplayName;
         makeCallBean.callVideoMode = callVideoMode;
+        MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_UDP);
         MediaManager.getInstance(reactContext).makeCall(makeCallBean, reactContext);
     }
 
