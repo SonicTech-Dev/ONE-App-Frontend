@@ -58,11 +58,4 @@ export default function CallbackServer({ port = 8080, onRequest }) {
     };
   }, [port, onRequest]);
 
-  return (
-    <Text>
-      {lastCalled === undefined
-        ? `LAN server listening on port ${port}.`
-        : `Last called at: ${new Date(lastCalled).toLocaleString()}`}
-    </Text>
-  );
 }

@@ -19,10 +19,10 @@ export default function DeviceGrid({
           title="Contacts"
           location="Contact Page"
           status=""
-          color="#4ac0ff"
+          color="#cfd88bff"
           isOn={false}
-          iconName="test-tube"
-          library="MaterialCommunityIcons"
+          iconName="contact-page"
+          library="MaterialIcons"
           onPress={() => navigation.navigate('SdkTest')}
           disabled={false}
         />
@@ -30,12 +30,12 @@ export default function DeviceGrid({
       <View style={styles.sdkTestTileRow}>
         <DeviceTile
           title="Smart Lock Screen"
-          location="Intercom Page"
+          location="Entrance"
           status=""
-          color="#4ac0ff"
+          color="#629a8aff"
           isOn={false}
-          iconName="test-tube"
-          library="MaterialCommunityIcons"
+          iconName="door-sliding"
+          library="MaterialIcons"
           onPress={() => navigation.navigate('SmartLockScreen')}
           disabled={false}
         />
@@ -43,12 +43,12 @@ export default function DeviceGrid({
       <View style={styles.sdkTestTileRow}>
         <DeviceTile
           title="IntercomScreen"
-          location="IntercomScreen"
+          location="Entrance"
           status=""
           color="#7b888fff"
           isOn={false}
-          iconName="test-tube"
-          library="MaterialCommunityIcons"
+          iconName="sensor-door"
+          library="MaterialIcons"
           onPress={() => navigation.navigate('IntercomScreen')}
           disabled={false}
         />

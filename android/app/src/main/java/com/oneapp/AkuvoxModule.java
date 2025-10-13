@@ -211,7 +211,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         makeCallBean.remoteUserName = remoteUserName;
         makeCallBean.remoteDisplayName = remoteDisplayName;
         makeCallBean.callVideoMode = callVideoMode;
-        MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_UDP);
         MediaManager.getInstance(reactContext).makeCall(makeCallBean, reactContext);
     }
 

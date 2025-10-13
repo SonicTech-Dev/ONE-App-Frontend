@@ -4,28 +4,6 @@ export const INITIAL_DEVICE_CATEGORIES = [
         {
         category: 'Mockup Room',
         items: [
-          { title: 'Curtain-1', location: 'Mockup Room', status: 'Off', color: '#4ac0ff', isOn: false, iconName: 'curtains' , library: 'MaterialCommunityIcons',
-          lan: {
-            device_id: '0c110500755b_91_5',
-            ability_id: 'cover.0c110500755b_91_5',
-            commandPair: { on: 'turn_on', off: 'turn_off', stop: 'stop' }
-          },
-          wan: {
-            device_id: 'd02b8a93297a748deb2c4ea56ab0e31d9',
-            ability_id: 'e6d42554a84ad481c8ae0836d33fafbbb',
-            commandPair: { on: 'open', off: 'close' , stop: 'stop' }
-          }},
-          { title: 'Curtain-2', location: 'Mockup Room', status: 'Off', color: '#4ac0ff', isOn: false, iconName: 'curtains' , library: 'MaterialCommunityIcons',
-          lan: {
-            device_id: '0c110500755b_91_5',
-            ability_id: 'cover.0c110500755b_91_5',
-            commandPair: { on: 'turn_on', off: 'turn_off', stop: 'stop' }
-          },
-          wan: {
-            device_id: 'd02b8a93297a748deb2c4ea56ab0e31d9',
-            ability_id: 'e6d42554a84ad481c8ae0836d33fafbbb',
-            commandPair: { on: 'open', off: 'close' , stop: 'stop' }
-          }},
           { title: 'SpotLight Entrance', location: 'Mockup Room', status: 'off', color: '#ff0000ff', isOn: false, iconName: 'pipe-valve' , library: 'MaterialCommunityIcons',
           lan: {
             device_id: '0c110500755c_61_1',
@@ -300,6 +278,28 @@ export const INITIAL_DEVICE_CATEGORIES = [
             device_id: 'd09d8fd7910884df3ba90c0ff65749bab',
             ability_id: 'e67c9175f62344999b49cfa21ee11e4f2',
             commandPair: { on: 'turn_on', off: 'turn_off' }
+          }},
+          { title: 'Curtain-1', location: 'Mockup Room', status: 'Off', color: '#4ac0ff', isOn: false, iconName: 'curtains' , library: 'MaterialCommunityIcons',
+          lan: {
+            device_id: '0c110500755b_91_5',
+            ability_id: 'cover.0c110500755b_91_5',
+            commandPair: { on: 'turn_on', off: 'turn_off', stop: 'stop' }
+          },
+          wan: {
+            device_id: 'd02b8a93297a748deb2c4ea56ab0e31d9',
+            ability_id: 'e6d42554a84ad481c8ae0836d33fafbbb',
+            commandPair: { on: 'open', off: 'close' , stop: 'stop' }
+          }},
+          { title: 'Curtain-2', location: 'Mockup Room', status: 'Off', color: '#4ac0ff', isOn: false, iconName: 'curtains' , library: 'MaterialCommunityIcons',
+          lan: {
+            device_id: '0c110500755b_91_5',
+            ability_id: 'cover.0c110500755b_91_5',
+            commandPair: { on: 'turn_on', off: 'turn_off', stop: 'stop' }
+          },
+          wan: {
+            device_id: 'd02b8a93297a748deb2c4ea56ab0e31d9',
+            ability_id: 'e6d42554a84ad481c8ae0836d33fafbbb',
+            commandPair: { on: 'open', off: 'close' , stop: 'stop' }
           }},
 
         ],
