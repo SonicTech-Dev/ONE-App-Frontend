@@ -3,7 +3,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeEventEmitter, NativeModules } from 'react-native';
-import CallbackServer from './app/components/Services/Server'; // <- Your LANServer, renamed
 import AuthNavigator from './app/navigation/AuthNavigator';
 import AppNavigator from './app/navigation/AppNavigator';
 import { StoreProvider } from './app/context/StoreContext';
@@ -14,9 +13,7 @@ const eventEmitter = new NativeEventEmitter(AkuvoxModule);
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleRequest = (req, res) => {
-    console.log('Callback API received:', { req, res });
-  };
+
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -61,8 +58,6 @@ export default function App() {
   return (
     <StoreProvider>
       <NavigationContainer>
-        {/* Callback/LAN Server for API */}
-        <CallbackServer port={8080} onRequest={handleRequest} />
         <View style={{ flex: 1 }}>
           {isLoggedIn ? <AppNavigator /> : <AuthNavigator />}
         </View>
