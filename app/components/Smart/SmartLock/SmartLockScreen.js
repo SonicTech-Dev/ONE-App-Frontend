@@ -17,9 +17,9 @@ export default function SmartLockScreen() {
   // Device config
   const residenceId = 'r45844047053e43d78fe5272c5badbd3a';
   const userId = 'a9b41de81c3284515a5e833d53412fe14';
-  const deviceId = 'd17a685f1c5dd4aa893cda99623df553e';
-  const deviceIp = '192.168.1.101';
-  const lanRtspUrl = 'rtsp://admin:Sonic123@192.168.1.101:554/cam/realmonitor?channel=1&subtype=0'; // <-- Use your LAN RTSP URL
+  const deviceId = 'd3cd5cf7cb83b46219a178aa8531ad081';
+  const deviceIp = '192.168.1.108';
+  const lanRtspUrl = 'rtsp://admin:Sonic123@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0'; // <-- Use your LAN RTSP URL
   const wanRtspUrl = 'rtsp://rtsp-a.ecloud.akubela.com:10554/507B91E14E64';
   const wanCiphertext = 'mUud6jHgyOriMe31CM4YdN4wBdaPnUSPB34SX17EBxUU4y74REq8CPyGxOAVdgOxR4v/c7yUd6oILUpZ21pTLsr1OE3tN2GOFmTW+VSaQRRS6KbjskTAvbhLumJ6hVBDcpYWwDgatX9EGCFmZ0svKQ==';
 

@@ -156,7 +156,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         );
         MediaManager.getInstance(reactContext).initMedia(reactContext);
     }
-
     @ReactMethod
     public void registerSip(String ciphertext, String displayName, Promise promise) {
         try {
@@ -175,7 +174,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             promise.reject("REGISTER_EXCEPTION", e.getMessage());
         }
     }
-    /* 
     @ReactMethod
     public void registerSipLan(String ciphertext, String displayName, Promise promise) {
         try {
@@ -194,7 +192,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             promise.reject("REGISTER_EXCEPTION", e.getMessage());
         }
     }
-    */
+    
     @ReactMethod
     public void getSipStatus(Promise promise) {
         try {

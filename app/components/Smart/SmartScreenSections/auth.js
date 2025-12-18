@@ -14,9 +14,6 @@ export async function getAccessToken() {
     "&expires_in=" + encodeURIComponent(EXPIRES_IN);
 
   try {
-    console.log("Sending auth request to:", AUTH_URL);
-    console.log("Body:", body);
-
     const response = await fetch(AUTH_URL, {
       method: "POST",
       headers: {
@@ -27,8 +24,6 @@ export async function getAccessToken() {
     });
 
     const text = await response.text();
-    console.log("Raw response text:", text);
-
     let data;
     try {
       data = JSON.parse(text);
@@ -61,7 +56,6 @@ export async function buildLanHeaders() {
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
     };
-    console.log("LAN headers built:", headers);
     return headers;
   } catch (err) {
     console.error("buildLanHeaders error:", err);

@@ -15,13 +15,14 @@ export default StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   scrollContainer: {
-    paddingTop: 200,
-    paddingHorizontal: 20,
+    paddingTop: "50%",
+    paddingBottom: "20%",
+    paddingHorizontal: 10,
   },
   deviceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   sdkTestTileRow: {
     flexDirection: 'row',

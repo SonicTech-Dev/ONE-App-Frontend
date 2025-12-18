@@ -1,11 +1,4 @@
 import { Alert } from 'react-native';
-import { buildLanHeaders } from './auth';
-
-// Helper to fetch LAN headers if not provided (for flexibility)
-const getLanHeaders = async (LAN_HEADERS) => {
-  if (LAN_HEADERS) return LAN_HEADERS;
-  return await buildLanHeaders();
-};
 
 export const controlDevice = async (
   deviceId,
@@ -13,7 +6,7 @@ export const controlDevice = async (
   command,
   attribute,
   selectedOption,
-  LAN_HEADERS // optional, will fetch if not provided
+  LAN_HEADERS // required, must be passed through props
 ) => {
   // Normalize selectedOption
   const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
@@ -30,12 +23,12 @@ export const controlDevice = async (
         ...(attribute ? { attribute } : {}),
       },
     };
+    console.log('LAN headers received for API:', LAN_HEADERS);
 
     try {
-      const headers = await getLanHeaders(LAN_HEADERS);
       const response = await fetch(lanApiUrl, {
         method: 'POST',
-        headers,
+        headers: LAN_HEADERS,
         body: JSON.stringify(body),
       });
 
@@ -91,7 +84,7 @@ export const deviceStatus = async (
   deviceId,
   selectedOption,
   setSelectedDeviceStatus,
-  LAN_HEADERS // optional, will fetch if not provided
+  LAN_HEADERS // required, must be passed through props
 ) => {
   // Normalize selectedOption
   const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
@@ -106,23 +99,22 @@ export const deviceStatus = async (
       },
     };
     try {
-      const headers = await getLanHeaders(LAN_HEADERS);
       const response = await fetch(lanApiUrl, {
         method: 'POST',
-        headers,
+        headers: LAN_HEADERS,
         body: JSON.stringify(body),
       });
 
       if (response.ok) {
         const data = await response.json();
         setSelectedDeviceStatus(data);
-        Alert.alert('Success', `Device controlled locally!`);
+        Alert.alert('Success', `Device status retrieved locally!`);
       } else {
         Alert.alert('Error', 'LAN control failed. Please check device connection.');
       }
     } catch (error) {
       console.error('LAN error:', error);
-      Alert.alert('Error', 'Failed to control device locally.');
+      Alert.alert('Error', 'Failed to retrieve device status locally.');
     }
   } else {
     const apiUrl = 'http://3.227.99.254:8010/device_status/';
@@ -146,13 +138,13 @@ export const deviceStatus = async (
       if (response.ok) {
         const data = await response.json();
         setSelectedDeviceStatus(data);
-        Alert.alert('Success', `Device controlled successfully!`);
+        Alert.alert('Success', `Device status retrieved successfully!`);
       } else {
         Alert.alert('Error', 'Something went wrong. Please try again.');
       }
     } catch (error) {
-      console.error('Error controlling device:', error);
-      Alert.alert('Error', 'Failed to control the device. Please check your connection.');
+      console.error('Error retrieving device status:', error);
+      Alert.alert('Error', 'Failed to retrieve the device status. Please check your connection.');
     }
   }
 };

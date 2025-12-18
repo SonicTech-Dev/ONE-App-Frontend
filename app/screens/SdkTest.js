@@ -18,34 +18,63 @@ import { requireNativeComponent } from 'react-native';
 const { Akuvox } = NativeModules;
 const VideoCallView = requireNativeComponent('VideoCallView');
 
+/**
+ * NOTE:
+ * - Devices/accounts now carry both sip_wan and sip_lan.
+ * - When the user registers via WAN (registerSip) we set registeredTransport = 'wan'
+ * - When the user registers via LAN (registerSipLan) we set registeredTransport = 'lan'
+ * - Calls pick the appropriate sip id (sip_lan or sip_wan) based on registeredTransport.
+ * - If not registered, we prompt the user to register first.
+ */
+
 const apiResult = {
   family_name: 'One-Dev Mockup-Flat',
   sip_group: '1191000500',
   devices: [
-    { device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip: '1000' },//sip: '1192101703'
-    { device_id: 'd9a69e144b34c47ea822169672c0fd40d', device_name: 'Hypanel KeyPlus new', mac: '0C110527CAAC', sip: '1192101704' },
-    { device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip: '1192101705' },
-    { device_id: 'd7ed72241e59342d29daffc0911503029', device_name: 'Hypanel KeyPlus27CA8F', mac: '0C110527CA8F', sip: '1192101723' },
+    // include both wan and lan SIP ids
+    { device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip_wan: '1192101703', sip_lan: '1000' },
+    { device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip_wan: '1192101705', sip_lan: '1003' },
+    { device_id: 'd9a69e144b34c47ea822169672c0fd40d', device_name: 'Hypanel KeyPlus  1 on M1', mac: '0C110527CAAC', sip_wan: '1192102163', sip_lan: '1001' },
+    { device_id: 'd7ed72241e59342d29daffc0911503029', device_name: 'Hypanel KeyPlus 2 in M1', mac: '0C110527CA8F', sip_wan: '1192102164', sip_lan: '1002' },
   ],
   accounts: [
-    { account_id: 'a9b41de81c3284515a5e833d53412fe14', sip: '1192101702', account_name: 'fayis@sonictech.ae', first_name: 'User', last_name: 'Bela', email: 'fayis@sonictech.ae', main_sip: '1192101504' },
-    { account_id: 'a26325098299c4090b7db6117cc0d623f', sip: '1192101706', account_name: 'mahmoudsalah11350@gmail.com', first_name: 'Mahmoud', last_name: 'Salah', email: 'mahmoudsalah11350@gmail.com', main_sip: '1467100107' },
+    { account_id: 'a9b41de81c3284515a5e833d53412fe14', sip_wan: '1192101702', sip_lan: '1192101702', account_name: 'fayis@sonictech.ae', first_name: 'User', last_name: 'Bela', email: 'fayis@sonictech.ae', main_sip: '1192101504' },
+    { account_id: 'a26325098299c4090b7db6117cc0d623f', sip_wan: '1192101706', sip_lan: '1192101706', account_name: 'mahmoudsalah11350@gmail.com', first_name: 'Mahmoud', last_name: 'Salah', email: 'mahmoudsalah11350@gmail.com', main_sip: '1467100107' },
+    { account_id: 'a2a340656d43745fdafce231cc9d1b2d1', sip_wan: '1192102110', sip_lan: '1192102110', account_name: 'marwan@sonictech.ae', first_name: 'Marwan', last_name: 'Khater', email: 'marwan@sonictech.ae', main_sip: '1467100107' },
   ],
   akuvox_devices: [
-    { mac: '0C11052C6E92', device_name: 'Intercom', sip: '1192101722' },
+    { mac: '0C11052C6E92', device_name: 'Intercom R29', sip_wan: '1192101722', sip_lan: '1004' },
   ],
 };
 
 const getContacts = () => {
   const contacts = [];
   apiResult.devices.forEach(device => {
-    contacts.push({ id: device.device_id, name: device.device_name, sip: device.sip, type: 'Device' });
+    contacts.push({
+      id: device.device_id,
+      name: device.device_name,
+      sip_wan: device.sip_wan,
+      sip_lan: device.sip_lan,
+      type: 'Device',
+    });
   });
   apiResult.accounts.forEach(account => {
-    contacts.push({ id: account.account_id, name: `${account.first_name} ${account.last_name}`, sip: account.sip, type: 'Account' });
+    contacts.push({
+      id: account.account_id,
+      name: `${account.first_name} ${account.last_name}`,
+      sip_wan: account.sip_wan,
+      sip_lan: account.sip_lan,
+      type: 'Account',
+    });
   });
   apiResult.akuvox_devices.forEach((dev, idx) => {
-    contacts.push({ id: `akuvox_${idx}`, name: dev.device_name, sip: dev.sip, type: 'Akuvox Device' });
+    contacts.push({
+      id: `akuvox_${idx}`,
+      name: dev.device_name,
+      sip_wan: dev.sip_wan,
+      sip_lan: dev.sip_lan,
+      type: 'Akuvox Device',
+    });
   });
   return contacts;
 };
@@ -70,6 +99,7 @@ export default function SdkContactScreen() {
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [currentCallId, setCurrentCallId] = useState(null); // Only set after SIP event
   const [incomingCall, setIncomingCall] = useState(null); // {callId, from}
+  const [registeredTransport, setRegisteredTransport] = useState(null); // 'wan' | 'lan' | null
 
   const contacts = getContacts();
 
@@ -112,21 +142,25 @@ export default function SdkContactScreen() {
         "q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9ydX3MDyvYiKsuodonqmKjAg3PpmfEezF76tQNBNbDBztjSHe+Nkz8Yb01jkqtln2qdX8FKQyk/Rzza1ZYAjJzS6DBgcGhLNpwPz7jrjOF1v",
         "User bela"
       );
+      // On success set registered transport to WAN
+      setRegisteredTransport('wan');
       Alert.alert('Result', result);
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to register SIP');
     }
   };
 
-    const handleRegisterSipLan = async () => {
+  const handleRegisterSipLan = async () => {
     try {
       const result = await Akuvox.registerSipLan(
         "4cUSgR92G0HEVtdqewd7AYuI0KWQwB2nk5nrvxIUD3s0kxU/Y/u/GMrpOy/8dgbPjgqHFZLxW2k5qB0vsk2MAnJtJHzgeTWl3i7CADQQ1YE=",
         "User bela"
       );
+      // On success set registered transport to LAN
+      setRegisteredTransport('lan');
       Alert.alert('Result', result);
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to register SIP');
+      Alert.alert('Error', error.message || 'Failed to register SIP (LAN)');
     }
   };
 
@@ -140,33 +174,56 @@ export default function SdkContactScreen() {
     }
   };
 
+  // Utility to pick the right SIP id for contact based on current registration transport
+  const pickSipForContact = (contact) => {
+    if (!contact) return null;
+    if (registeredTransport === 'lan') {
+      // prefer sip_lan, fall back to sip_wan or generic sip if present
+      return contact.sip_lan || contact.sip_wan || contact.sip;
+    } else if (registeredTransport === 'wan') {
+      return contact.sip_wan || contact.sip_lan || contact.sip;
+    } else {
+      // not registered: prefer wan by default but will prompt user to register
+      return contact.sip_wan || contact.sip_lan || contact.sip;
+    }
+  };
+
   // Contact Call Actions
   const handleMakeAudioCall = async (contact) => {
+    if (!registeredTransport) {
+      Alert.alert('Not Registered', 'Please register SIP (WAN or LAN) before making calls.');
+      return;
+    }
     const permissionsGranted = await requestPermissionsIfNeeded();
     if (!permissionsGranted) {
       Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
       return;
     }
-    Akuvox.makeCall(contact.sip, contact.name, 0); // 0 for audio call
+    const sipToCall = pickSipForContact(contact);
+    Akuvox.makeCall(sipToCall, contact.name, 0); // 0 for audio call
     setModalVisible(false);
-    Alert.alert('Making Audio Call', `Calling ${contact.name}`);
+    Alert.alert('Making Audio Call', `Calling ${contact.name} (${registeredTransport.toUpperCase()} SIP: ${sipToCall})`);
   };
 
   const handleMakeVideoCall = async (contact) => {
+    if (!registeredTransport) {
+      Alert.alert('Not Registered', 'Please register SIP (WAN or LAN) before making calls.');
+      return;
+    }
     const permissionsGranted = await requestPermissionsIfNeeded();
     if (!permissionsGranted) {
       Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
       return;
     }
-    Akuvox.makeCall(contact.sip, contact.name, 1); // 1 for video call
+    const sipToCall = pickSipForContact(contact);
+    Akuvox.makeCall(sipToCall, contact.name, 1); // 1 for video call
     setModalVisible(false);
-    Alert.alert('Making Video Call', `Calling ${contact.name} (video)`);
+    Alert.alert('Making Video Call', `Calling ${contact.name} (video) — ${registeredTransport.toUpperCase()} SIP: ${sipToCall}`);
   };
 
   // Accept/Reject Incoming Call
   const handleAcceptCall = async () => {
     if (!incomingCall || !incomingCall.callId) return;
-    // Accept video call by default (mode 1), or you can ask user
     Akuvox.answerCall(incomingCall.callId); // Native must implement this!
     setShowVideoCall(true);
     setIncomingCall(null);
@@ -181,20 +238,28 @@ export default function SdkContactScreen() {
   };
 
   // List Item Render
-  const renderContactItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.contactItem}
-      onPress={() => {
-        setSelectedContact(item);
-        setModalVisible(true);
-      }}
-    >
-      <View>
-        <Text style={styles.contactName}>{item.name}</Text>
-        <Text style={styles.contactDetail}>{item.type} · SIP: {item.sip}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderContactItem = ({ item }) => {
+    const activeSip = registeredTransport ? pickSipForContact(item) : '(not registered)';
+    return (
+      <TouchableOpacity
+        style={styles.contactItem}
+        onPress={() => {
+          setSelectedContact(item);
+          setModalVisible(true);
+        }}
+      >
+        <View>
+          <Text style={styles.contactName}>{item.name}</Text>
+          <Text style={styles.contactDetail}>
+            {item.type} · SIP (WAN: {item.sip_wan || '-'} · LAN: {item.sip_lan || '-'})
+          </Text>
+          <Text style={[styles.contactDetail, { marginTop: 6 }]}>
+            Active SIP: {registeredTransport ? activeSip : 'Register first'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   // Modal for Call Options
   const CallOptionsModal = () => (
@@ -245,7 +310,13 @@ export default function SdkContactScreen() {
         <View style={styles.incomingModalContainer}>
           <Text style={styles.incomingTitle}>Incoming Call</Text>
           <Text style={styles.incomingFrom}>
-            {incomingCall?.from ? `From: ${incomingCall.from}` : ""}
+            {incomingCall?.remoteDisplayName
+              ? `From: ${incomingCall.remoteDisplayName}`
+              : incomingCall?.remoteUserName
+              ? `From: ${incomingCall.remoteUserName}`
+              : incomingCall?.from
+              ? `From: ${incomingCall.from}`
+              : ''}
           </Text>
           <View style={styles.incomingBtnRow}>
             <TouchableOpacity style={styles.acceptBtn} onPress={handleAcceptCall}>
@@ -293,7 +364,13 @@ export default function SdkContactScreen() {
         <Button title="SIP Status" onPress={handleGetSipStatus} color="#2b6cb0" />
       </View>
       <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
-        <Text style={styles.headerTitle}>Contacts</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.headerTitle}>Contacts</Text>
+          <Text style={{ color: registeredTransport ? '#38a169' : '#e53e3e', fontWeight: '700' }}>
+            {registeredTransport ? `Registered: ${registeredTransport.toUpperCase()}` : 'Not Registered'}
+          </Text>
+        </View>
+
         <FlatList
           data={contacts}
           keyExtractor={(item) => item.id}

@@ -81,8 +81,8 @@ export default function DeviceModals({
     );
   }
   if (
-  title.includes("AC - Thermostat") ||
-  title.includes("AC - Fancoil") ||
+  title.includes("Thermostat 1") ||
+  title.includes("Thermostat 2") ||
   title.includes("Super General AC")
 ) {
   return (

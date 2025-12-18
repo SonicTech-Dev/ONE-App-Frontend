@@ -1,104 +1,65 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 
+/**
+ * CallbackRegister Component
+ * - Sends a POST request to register a callback with the external server.
+ * - Uses props passed for full customization and manages error/success responses.
+ */
 export default function CallbackRegistration({
-  deviceCallbackUrl,
-  callbackUrl,
-  token,
-  callbackId,
-  listenList = ['device'],
-  run, // boolean: should trigger registration
-  onStatus, // callback for status updates (optional)
+  deviceCallbackUrl, // The external server's callback registration endpoint
+  callbackUrl,       // Your app's callback URL
+  lanHeaders,        // Full LAN headers (including Authorization)
+  callbackId,        // Unique ID for the callback
+  listenList,        // List of event types to listen for
+  run,               // Boolean flag to trigger registration
+  onStatus           // Callback for success or error status
 }) {
-  const [status, setStatus] = useState('');
-  const [response, setResponse] = useState(null);
-
   useEffect(() => {
-    console.log('[CallbackRegistration] useEffect fired');
-    console.log('[CallbackRegistration] Props:', {
-      deviceCallbackUrl,
-      callbackUrl,
-      token,
-      callbackId,
-      listenList,
-      run,
-      onStatus,
-    });
+    // Trigger the callback registration only if `run` is true
+    if (run) {
+      const configureCallback = async () => {
+        try {
+          // Define request payload based on the provided format
+          const payload = {
+            command: "configure_callback",
+            id: callbackId,
+            param: {
+              url: callbackUrl,
+              listen_list: listenList,
+            },
+          };
 
-    if (!run) {
-      console.log('[CallbackRegistration] run prop is false, not registering callback.');
-      return;
-    }
-    if (!token) {
-      console.log('[CallbackRegistration] token is missing, not registering callback.');
-      return;
-    }
+          // Send the POST request to register the callback
+          const response = await fetch(deviceCallbackUrl, {
+            method: 'POST',
+            headers: {
+              ...lanHeaders, // Use the full lanHeaders directly
+              'Content-Type': 'application/json', // Ensure payload format
+              Accept: 'application/json',        // Expected response format
+            },
+            body: JSON.stringify(payload),        // Convert payload to JSON
+          });
 
-    async function registerCallback() {
-      setStatus('Registering...');
-      console.log('[CallbackRegistration] Attempting registration...');
-      console.log('[CallbackRegistration] POST URL:', deviceCallbackUrl);
-      console.log('[CallbackRegistration] POST Headers:', {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      });
+          const data = await response.json();      // Parse JSON response
 
-      const postBody = {
-        command: 'configure_callback',
-        id: callbackId,
-        param: {
-          url: callbackUrl,
-          listen_list: listenList,
-        },
+          // Handle response based on success/error status
+          if (response.ok) {
+            onStatus('success', data);            // Notify successful registration
+          } else {
+            console.error('Callback Registration Failed:', data);
+            onStatus('error', data);              // Notify of failure
+          }
+        } catch (error) {
+          // Catch network errors or unexpected issues
+          console.error('Callback Registration Error:', error.message);
+          onStatus('error', { message: error.message });
+        }
       };
 
-      console.log('[CallbackRegistration] POST Body:', JSON.stringify(postBody, null, 2));
-
-      try {
-        const res = await fetch(deviceCallbackUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(postBody),
-        });
-
-        console.log('[CallbackRegistration] Raw fetch response:', res);
-
-        let data;
-        try {
-          data = await res.json();
-          console.log('[CallbackRegistration] JSON response:', data);
-        } catch (jsonError) {
-          console.log('[CallbackRegistration] Failed to parse JSON:', jsonError);
-          data = await res.text();
-          console.log('[CallbackRegistration] Raw text response:', data);
-        }
-
-        setResponse(data);
-
-        if (res.ok) {
-          setStatus('Success');
-          console.log('[CallbackRegistration] Registration success:', data);
-          if (onStatus) onStatus('success', data);
-        } else {
-          setStatus('Error');
-          console.log('[CallbackRegistration] Registration failed, status:', res.status);
-          if (onStatus) onStatus('error', data);
-        }
-      } catch (err) {
-        setStatus('Error');
-        setResponse(err.message);
-        console.log('[CallbackRegistration] Network or fetch error:', err);
-        if (onStatus) onStatus('error', err.message);
-      }
+      configureCallback(); // Execute the callback registration logic
     }
+  }, [deviceCallbackUrl, callbackUrl, lanHeaders, callbackId, listenList, run, onStatus]);
 
-    registerCallback();
-
-  }, [run, deviceCallbackUrl, callbackUrl, token, callbackId, listenList, onStatus]);
-
+  // Return null since this component does not render any UI
   return null;
 }

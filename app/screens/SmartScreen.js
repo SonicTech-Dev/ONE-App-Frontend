@@ -27,7 +27,6 @@ export default function SmartScreen({ navigation }) {
 
   useEffect(() => {
     console.log('[SmartScreen] selectedOption:', selectedOption);
-    console.log('[SmartScreen] lanHeaders:', lanHeaders);
     console.log('[SmartScreen] callbackRegistered:', callbackRegistered);
   }, [selectedOption, lanHeaders, callbackRegistered]);
 
@@ -37,7 +36,7 @@ export default function SmartScreen({ navigation }) {
         async function fetchHeaders() {
           try {
             const headers = await buildLanHeaders();
-            console.log('[SmartScreen] buildLanHeaders result:', headers);
+            console.log('[SmartScreen] LAN headers fetched:', headers);
             setLanHeaders(headers);
           } catch (e) {
             Alert.alert('Token Error', 'Failed to fetch access token.');
@@ -55,7 +54,6 @@ export default function SmartScreen({ navigation }) {
     if (
       selectedOption === 'LAN' &&
       lanHeaders &&
-      lanHeaders.token &&
       !callbackRegistered
     ) {
       console.log('[SmartScreen] Ready to register callback!');
@@ -143,7 +141,7 @@ export default function SmartScreen({ navigation }) {
     );
     const command = dev.commandPair[newControl];
     const headers = lanHeaders;
-    controlDevice(dev.device_id, dev.ability_id, command, null, selectedOption);
+    controlDevice(dev.device_id, dev.ability_id, command, null, selectedOption, headers);
     deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, headers);
   };
 
@@ -226,7 +224,7 @@ export default function SmartScreen({ navigation }) {
     <Screen>
       <Animated.View style={[styles.headerContainer, { transform: [{ translateY: headerTranslateY }] }]}>
         <Header />
-        <StatsSection selectedOption={selectedOption} setSelectedOption={setSelectedOption} />
+        <StatsSection selectedOption={selectedOption} setSelectedOption={setSelectedOption} lanHeaders={lanHeaders}/>
       </Animated.View>
       <Animated.View style={[styles.tabsContainer, { transform: [{ translateY: tabsTranslateY }] }]}>
         <Tabs tabs={categories.map((c) => c.category)} onTabChange={handleTabChange} activeTab={activeTab} />
@@ -235,18 +233,17 @@ export default function SmartScreen({ navigation }) {
       {/* LAN Server for API */}
       <CallbackServer port={8080} onRequest={handleRequest} />
 
-      {/* Callback Registration: only run after token is available */}
-      {selectedOption === 'LAN' && !!lanHeaders?.token && !callbackRegistered && (
+      {selectedOption === 'LAN' && !callbackRegistered && (
         <CallbackRegistration
           deviceCallbackUrl="http://192.168.1.125/api/v1.0/callback"
-          callbackUrl="http://192.168.1.150:8080/"
-          token={lanHeaders?.Authorization?.replace('Bearer ', '')}
+          callbackUrl="http://192.168.1.108:8080/"
+          lanHeaders={lanHeaders}                     // Pass lanHeaders directly
           callbackId="c45e846ca23ab42c9ae469d988ae32a96"
           listenList={['device']}
-          run={selectedOption === 'LAN' && !!lanHeaders?.Authorization && !callbackRegistered}
+          run={selectedOption === 'LAN' && !!lanHeaders && !callbackRegistered}
           onStatus={(status, res) => {
             if (status === 'success') setCallbackRegistered(true);
-            if (status === 'error') Alert.alert('Callback Registration Error', res);
+            if (status === 'error') Alert.alert('Callback Registration Error', res?.message || 'Failed to register callback.');
           }}
         />
       )}
@@ -258,6 +255,7 @@ export default function SmartScreen({ navigation }) {
         setSelectedDevice={setSelectedDevice}
         setModalVisible={setModalVisible}
         selectedOption={selectedOption}
+        activeTab={activeTab}
       />
       <DevicModal
         selectedDevice={selectedDevice}

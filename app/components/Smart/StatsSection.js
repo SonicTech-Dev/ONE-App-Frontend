@@ -1,8 +1,8 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React from 'react';
 import styled from 'styled-components/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Text, TouchableOpacity, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TouchableOpacity } from 'react-native';
+import OnlineStatus from './OnlineStatus';
 
 const stats = [
   { icon: 'sunny', value: '75%', label: 'motion' },
@@ -10,10 +10,11 @@ const stats = [
   { icon: 'thermometer', value: '24°C', label: 'temp' },
 ];
 
-const StatsSection = ({ selectedOption, setSelectedOption }) => {
-
+const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
+  const lanAuthToken = lanHeaders?.Authorization ?? lanHeaders?.token ?? null;
   return (
     <>
+      
       <StatsContainer>
         {stats.map((stat, index) => (
           <Stat key={index}>
@@ -23,6 +24,7 @@ const StatsSection = ({ selectedOption, setSelectedOption }) => {
           </Stat>
         ))}
       </StatsContainer>
+
       {/* Radio Button Section with Online/Offline Status */}
       <RadioRow>
         <RadioContainer>
@@ -31,14 +33,14 @@ const StatsSection = ({ selectedOption, setSelectedOption }) => {
             <RadioText>LAN</RadioText>
           </RadioOption>
 
-          <RadioOption onPress={() => setSelectedOption('WAN')} >
+          <RadioOption onPress={() => setSelectedOption('WAN')}>
             <RadioCircle selected={selectedOption === 'WAN'} />
             <RadioText>WAN</RadioText>
-
           </RadioOption>
         </RadioContainer>
 
-        {/* Online/Offline Status */}
+        {/* Online/Offline Status component */}
+        <OnlineStatus selectedOption={selectedOption} lanAuthToken={lanAuthToken} />
       </RadioRow>
     </>
   );
@@ -107,11 +109,4 @@ const RadioText = styled.Text`
   margin-left: 8px;
   font-size: 16px;
   color: #333;
-`;
-
-const StatusText = styled.Text`
-  font-size: 16px;
-  font-weight: bold;
-  color: ${(props) => (props.isOnline ? 'green' : 'red')};
-  margin-left: 16px;
 `;

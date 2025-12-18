@@ -75,6 +75,7 @@
     "react-native-modal": "^11.10.0",
     "react-native-modal-dropdown": "^1.0.2",
     "react-native-modalize": "^2.0.13",
+    "react-native-network-info": "^5.2.2",
     "react-native-pager-view": "^6.8.1",
     "react-native-progress": "^4.1.2",
     "react-native-ratings": "^8.1.0",
