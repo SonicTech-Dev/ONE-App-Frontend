@@ -3,6 +3,7 @@ import styled from 'styled-components/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { TouchableOpacity } from 'react-native';
 import OnlineStatus from './OnlineStatus';
+import { useNavigation } from '@react-navigation/native';
 
 const stats = [
   { icon: 'sunny', value: '75%', label: 'motion' },
@@ -12,9 +13,9 @@ const stats = [
 
 const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
   const lanAuthToken = lanHeaders?.Authorization ?? lanHeaders?.token ?? null;
+  const navigation = useNavigation();
   return (
     <>
-      
       <StatsContainer>
         {stats.map((stat, index) => (
           <Stat key={index}>
@@ -25,7 +26,7 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
         ))}
       </StatsContainer>
 
-      {/* Radio Button Section with Online/Offline Status */}
+      {/* Radio Button Section with Navigation and Online/Offline Status */}
       <RadioRow>
         <RadioContainer>
           <RadioOption onPress={() => setSelectedOption('LAN')}>
@@ -38,7 +39,12 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
             <RadioText>WAN</RadioText>
           </RadioOption>
         </RadioContainer>
-
+        {/* Navigate Button */}
+          <NavigateButton
+            onPress={() => navigation.navigate('DeviceStatuses', { selectedOption, lanAuthToken })}
+          >
+            <NavigateText>All Devices Status</NavigateText>
+          </NavigateButton>
         {/* Online/Offline Status component */}
         <OnlineStatus selectedOption={selectedOption} lanAuthToken={lanAuthToken} />
       </RadioRow>
@@ -48,6 +54,7 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
 
 export default StatsSection;
 
+// Styled Components
 const StatsContainer = styled.View`
   flex-direction: row;
   justify-content: space-around;
@@ -76,7 +83,6 @@ const StatLabel = styled.Text`
   color: #7d8da6;
 `;
 
-// Radio Button Styles
 const RadioRow = styled.View`
   flex-direction: row;
   align-items: center;
@@ -109,4 +115,16 @@ const RadioText = styled.Text`
   margin-left: 8px;
   font-size: 16px;
   color: #333;
+`;
+
+// Navigation Button Styles
+const NavigateButton = styled(TouchableOpacity)`
+  flex-direction: row;
+  align-items: center;
+`;
+
+const NavigateText = styled.Text`
+  font-size: 12px;
+  color: #0073ffff;
+  margin-left: 8px;
 `;
