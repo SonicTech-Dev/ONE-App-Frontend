@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Animated, Alert } from 'react-native';
+import { Animated, Alert, Platform, PermissionsAndroid, NativeModules } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from '../components/Smart/Header';
 import StatsSection from '../components/Smart/StatsSection';
 import Tabs from '../components/Smart/Tabs';
@@ -14,6 +15,28 @@ import DeviceGrid from '../components/Smart/SmartScreenSections/DeviceGrid';
 import { buildLanHeaders } from '../components/Smart/SmartScreenSections/auth';
 import CallbackRegistration from '../components/Services/CallbackRegister';
 
+const { Akuvox } = NativeModules;
+
+// Reuse the same auth strings you had in Contacts screen
+const WAN_SIP_TOKEN =
+  'q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9ydX3MDyvYiKsuodonqmKjAg3PpmfEezF76tQNBNbDBztjSHe+Nkz8Yb01jkqtln2qdX8FKQyk/Rzza1ZYAjJzS6DBgcGhLNpwPz7jrjOF1v';
+const LAN_SIP_TOKEN =
+  '4cUSgR92G0HEVtdqewd7AT4zS22YVQVM1/7OlVH7QnsnwtqrXdLYVtz8poL/nhWnUEVM7QTea2rWri23BdQHUxyhWOz3IuzWo9o/S3hS93c=';
+
+// Permissions helper (Android)
+async function requestPermissionsIfNeeded() {
+  if (Platform.OS === 'android') {
+    const camera = PermissionsAndroid.PERMISSIONS.CAMERA;
+    const audio = PermissionsAndroid.PERMISSIONS.RECORD_AUDIO;
+    const granted = await PermissionsAndroid.requestMultiple([camera, audio]);
+    return (
+      granted[camera] === PermissionsAndroid.RESULTS.GRANTED &&
+      granted[audio] === PermissionsAndroid.RESULTS.GRANTED
+    );
+  }
+  return true;
+}
+
 export default function SmartScreen({ navigation }) {
   const [selectedOption, setSelectedOption] = useState('LAN');
   const [deviceCategories, setDeviceCategories] = useState(INITIAL_DEVICE_CATEGORIES);
@@ -25,11 +48,41 @@ export default function SmartScreen({ navigation }) {
   const [lanHeaders, setLanHeaders] = useState(null);
   const [callbackRegistered, setCallbackRegistered] = useState(false);
 
+  // SIP state
+  const [sipInitialized, setSipInitialized] = useState(false);
+  const [lastRegisteredTransport, setLastRegisteredTransport] = useState(null); // 'lan' | 'wan' | null
+
   useEffect(() => {
     console.log('[SmartScreen] selectedOption:', selectedOption);
     console.log('[SmartScreen] callbackRegistered:', callbackRegistered);
   }, [selectedOption, lanHeaders, callbackRegistered]);
 
+  // Init SDK once when we land on SmartScreen
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const permissionsGranted = await requestPermissionsIfNeeded();
+      if (!permissionsGranted) {
+        Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
+        return;
+      }
+      try {
+        Akuvox?.initSdk?.();
+        if (mounted) {
+          setSipInitialized(true);
+          console.log('[SmartScreen] SDK initialized.');
+        }
+      } catch (e) {
+        console.warn('[SmartScreen] initSdk error:', e);
+        Alert.alert('SDK Error', e?.message || 'Failed to initialize SIP SDK.');
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Build LAN headers when LAN is selected
   useEffect(() => {
     if (selectedOption === 'LAN') {
       if (!lanHeaders) {
@@ -49,6 +102,44 @@ export default function SmartScreen({ navigation }) {
       setCallbackRegistered(false); // reset registration if leaving LAN
     }
   }, [selectedOption]);
+
+  // Auto register SIP whenever selectedOption changes (LAN/WAN),
+  // after SDK init and (for LAN) when headers are available
+  useEffect(() => {
+    const register = async () => {
+      if (!sipInitialized) return;
+
+      try {
+        if (selectedOption === 'LAN') {
+          // Wait for LAN headers for better readiness on local network
+          if (!lanHeaders) {
+            console.log('[SmartScreen] Waiting for LAN headers before LAN SIP registration...');
+            return;
+          }
+          if (lastRegisteredTransport !== 'lan') {
+            console.log('[SmartScreen] Registering SIP via LAN...');
+            const res = await Akuvox.registerSipLan(LAN_SIP_TOKEN, 'User bela');
+            console.log('[SmartScreen] LAN register result:', res);
+            setLastRegisteredTransport('lan');
+            await AsyncStorage.setItem('registeredTransport', 'lan');
+          }
+        } else if (selectedOption === 'WAN') {
+          if (lastRegisteredTransport !== 'wan') {
+            console.log('[SmartScreen] Registering SIP via WAN...');
+            const res = await Akuvox.registerSip(WAN_SIP_TOKEN, 'User bela');
+            console.log('[SmartScreen] WAN register result:', res);
+            setLastRegisteredTransport('wan');
+            await AsyncStorage.setItem('registeredTransport', 'wan');
+          }
+        }
+      } catch (error) {
+        console.warn('[SmartScreen] SIP registration error:', error);
+        Alert.alert('SIP Registration Error', error?.message || 'Failed to register SIP.');
+      }
+    };
+
+    register();
+  }, [sipInitialized, selectedOption, lanHeaders, lastRegisteredTransport]);
 
   useEffect(() => {
     if (

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Button,
   Alert,
   FlatList,
   TouchableOpacity,
@@ -14,24 +13,21 @@ import {
   NativeEventEmitter,
   NativeModules,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireNativeComponent } from 'react-native';
 const { Akuvox } = NativeModules;
 const VideoCallView = requireNativeComponent('VideoCallView');
 
 /**
- * NOTE:
- * - Devices/accounts now carry both sip_wan and sip_lan.
- * - When the user registers via WAN (registerSip) we set registeredTransport = 'wan'
- * - When the user registers via LAN (registerSipLan) we set registeredTransport = 'lan'
- * - Calls pick the appropriate sip id (sip_lan or sip_wan) based on registeredTransport.
- * - If not registered, we prompt the user to register first.
+ * Contacts now reflect SIP registration initiated in SmartScreen.
+ * We read 'registeredTransport' from AsyncStorage to know whether LAN/WAN was chosen.
+ * Buttons for init/register are removed — registration happens automatically in SmartScreen.
  */
 
 const apiResult = {
   family_name: 'One-Dev Mockup-Flat',
   sip_group: '1191000500',
   devices: [
-    // include both wan and lan SIP ids
     { device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip_wan: '1192101703', sip_lan: '1000' },
     { device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip_wan: '1192101705', sip_lan: '1003' },
     { device_id: 'd9a69e144b34c47ea822169672c0fd40d', device_name: 'Hypanel KeyPlus  1 on M1', mac: '0C110527CAAC', sip_wan: '1192102163', sip_lan: '1001' },
@@ -103,6 +99,23 @@ export default function SdkContactScreen() {
 
   const contacts = getContacts();
 
+  // Load chosen transport from SmartScreen
+  useEffect(() => {
+    const loadTransport = async () => {
+      try {
+        const t = await AsyncStorage.getItem('registeredTransport');
+        if (t === 'lan' || t === 'wan') {
+          setRegisteredTransport(t);
+        } else {
+          setRegisteredTransport(null);
+        }
+      } catch (e) {
+        console.warn('[Contacts] Failed to load registeredTransport:', e);
+      }
+    };
+    loadTransport();
+  }, []);
+
   // Listen for SIP call established event
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(Akuvox);
@@ -125,54 +138,18 @@ export default function SdkContactScreen() {
     return () => incomingCallSub.remove();
   }, []);
 
-  // SDK Actions
-  const handleInitSdk = async () => {
-    const permissionsGranted = await requestPermissionsIfNeeded();
-    if (!permissionsGranted) {
-      Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
-      return;
-    }
-    Akuvox.initSdk();
-    Alert.alert('SDK Initialized');
-  };
-
-  const handleRegisterSip = async () => {
-    try {
-      const result = await Akuvox.registerSip(
-        "q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9ydX3MDyvYiKsuodonqmKjAg3PpmfEezF76tQNBNbDBztjSHe+Nkz8Yb01jkqtln2qdX8FKQyk/Rzza1ZYAjJzS6DBgcGhLNpwPz7jrjOF1v",
-        "User bela"
-      );
-      // On success set registered transport to WAN
-      setRegisteredTransport('wan');
-      Alert.alert('Result', result);
-    } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to register SIP');
-    }
-  };
-
-  const handleRegisterSipLan = async () => {
-    try {
-      const result = await Akuvox.registerSipLan(
-        "4cUSgR92G0HEVtdqewd7AT4zS22YVQVM1/7OlVH7QnsnwtqrXdLYVtz8poL/nhWnUEVM7QTea2rWri23BdQHUxyhWOz3IuzWo9o/S3hS93c=",
-        "User bela"
-      );
-      // On success set registered transport to LAN
-      setRegisteredTransport('lan');
-      Alert.alert('Result', result);
-    } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to register SIP (LAN)');
-    }
-  };
-
-  const handleGetSipStatus = async () => {
-    try {
-      const status = await Akuvox.getSipStatus();
-      setSipStatus(status);
-      Alert.alert('SIP Status', status.toString());
-    } catch (e) {
-      Alert.alert('Error', e.message || 'Failed to get SIP status');
-    }
-  };
+  // Optionally poll or fetch SIP status to show user feedback
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const status = await Akuvox.getSipStatus();
+        setSipStatus(status);
+      } catch (e) {
+        // non-blocking
+      }
+    };
+    fetchStatus();
+  }, []);
 
   // Utility to pick the right SIP id for contact based on current registration transport
   const pickSipForContact = (contact) => {
@@ -191,7 +168,7 @@ export default function SdkContactScreen() {
   // Contact Call Actions
   const handleMakeAudioCall = async (contact) => {
     if (!registeredTransport) {
-      Alert.alert('Not Registered', 'Please register SIP (WAN or LAN) before making calls.');
+      Alert.alert('Not Registered', 'Please go to Smart page and choose LAN or WAN to register SIP.');
       return;
     }
     const permissionsGranted = await requestPermissionsIfNeeded();
@@ -207,7 +184,7 @@ export default function SdkContactScreen() {
 
   const handleMakeVideoCall = async (contact) => {
     if (!registeredTransport) {
-      Alert.alert('Not Registered', 'Please register SIP (WAN or LAN) before making calls.');
+      Alert.alert('Not Registered', 'Please go to Smart page and choose LAN or WAN to register SIP.');
       return;
     }
     const permissionsGranted = await requestPermissionsIfNeeded();
@@ -254,7 +231,7 @@ export default function SdkContactScreen() {
             {item.type} · SIP (WAN: {item.sip_wan || '-'} · LAN: {item.sip_lan || '-'})
           </Text>
           <Text style={[styles.contactDetail, { marginTop: 6 }]}>
-            Active SIP: {registeredTransport ? activeSip : 'Register first'}
+            Active SIP: {registeredTransport ? activeSip : 'Register in Smart page'}
           </Text>
         </View>
       </TouchableOpacity>
@@ -275,24 +252,27 @@ export default function SdkContactScreen() {
             Call {selectedContact?.name}
           </Text>
           <View style={styles.modalButtons}>
-            <Button
-              title="Audio Call"
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: '#3182ce' }]}
               onPress={() => handleMakeAudioCall(selectedContact)}
-              color="#3182ce"
-            />
+            >
+              <Text style={styles.actionText}>Audio Call</Text>
+            </TouchableOpacity>
             <View style={{ height: 12 }} />
-            <Button
-              title="Video Call"
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: '#38a169' }]}
               onPress={() => handleMakeVideoCall(selectedContact)}
-              color="#38a169"
-            />
+            >
+              <Text style={styles.actionText}>Video Call</Text>
+            </TouchableOpacity>
           </View>
           <View style={{ height: 12 }} />
-          <Button
-            title="Cancel"
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#a0aec0' }]}
             onPress={() => setModalVisible(false)}
-            color="#a0aec0"
-          />
+          >
+            <Text style={styles.actionText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -357,31 +337,27 @@ export default function SdkContactScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.topBar}>
-        <Button title="Init SDK" onPress={handleInitSdk} color="#2b6cb0" />
-        <Button title="Register SIP" onPress={handleRegisterSip} color="#2b6cb0" />
-        <Button title="Register SIP (LAN)" onPress={handleRegisterSipLan} color="#2b6cb0" />
-        <Button title="SIP Status" onPress={handleGetSipStatus} color="#2b6cb0" />
-      </View>
-      <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.headerTitle}>Contacts</Text>
-          <Text style={{ color: registeredTransport ? '#38a169' : '#e53e3e', fontWeight: '700' }}>
+      {/* Header with status pill (no init/register buttons) */}
+      <View style={styles.headerBar}>
+        <Text style={styles.headerTitle}>Contacts</Text>
+        <View style={[styles.statusPill, { backgroundColor: registeredTransport ? '#C6F6D5' : '#FED7D7' }]}>
+          <Text style={[styles.statusPillText, { color: registeredTransport ? '#22543D' : '#822727' }]}>
             {registeredTransport ? `Registered: ${registeredTransport.toUpperCase()}` : 'Not Registered'}
           </Text>
         </View>
-
-        <FlatList
-          data={contacts}
-          keyExtractor={(item) => item.id}
-          renderItem={renderContactItem}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          contentContainerStyle={{ paddingBottom: 24 }}
-        />
-        {sipStatus !== null && (
-          <Text style={styles.sipStatus}>SIP Status: {sipStatus}</Text>
-        )}
       </View>
+
+      <FlatList
+        data={contacts}
+        keyExtractor={(item) => item.id}
+        renderItem={renderContactItem}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 16 }}
+      />
+      {sipStatus !== null && (
+        <Text style={styles.sipStatus}>SIP Status: {sipStatus}</Text>
+      )}
+
       {modalVisible && selectedContact && <CallOptionsModal />}
       {incomingCall && <IncomingCallModal />}
       {showVideoCall && currentCallId !== null && <VideoCallOverlay />}
@@ -391,27 +367,35 @@ export default function SdkContactScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f7fafc' },
-  topBar: {
+  headerBar: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#e2e8f0',
     borderBottomWidth: 1,
     borderColor: '#cbd5e0',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '600',
-    textAlign: 'left',
-    marginBottom: 16,
     color: '#2d3748',
+  },
+  statusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statusPillText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   contactItem: {
     padding: 16,
     borderRadius: 10,
     backgroundColor: '#edf2f7',
-    marginVertical: 2,
+    marginVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
     elevation: 2,
@@ -461,6 +445,17 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     width: '100%',
+  },
+  actionBtn: {
+    width: '100%',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  actionText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
   },
   incomingModalBg: {
     flex: 1,

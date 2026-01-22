@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Platform, Text, TouchableOpacity } from 'react-native';
 import RTSPViewer from './RTSPViewer';
 
-const LAN_RTSP_URL = 'rtsp://admin:Sonic123@192.168.1.106:554/cam/realmonitor?channel=1&subtype=0';
+const LAN_RTSP_URL = 'rtsp://admin:Sonic123@192.168.2.114:554/cam/realmonitor?channel=1&subtype=0';
 
 export default function IntercomScreen() {
   // Streaming view opens immediately, no modal, styled as a big full screen view with a close button
