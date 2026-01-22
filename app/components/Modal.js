@@ -14,6 +14,7 @@ import SmokeSensorModal from './Smart/Sensors/SmokeSensor';
 import AirQualityMonitorModal from './Smart/Sensors/AirQualityMonitor';
 import CoSensorModal from './Smart/Sensors/CoSensor';
 import C6LockModal from './Smart/SmartLock/C6Lock';
+import F2LockModal from './Smart/SmartLock/F2Lock';
 import FourGangSwitchModal from './Smart/Switches/FourGangTouch';
 
 export default function DeviceModals({
@@ -66,7 +67,23 @@ export default function DeviceModals({
       />
     );
   }
-  if (title === "Curtain") {
+  if (
+    title.includes("F2 SmartLock")
+    ) {
+    return (
+      <F2LockModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        device={selectedDevice}
+        isLocked={isOn}
+        onToggleLock={() => {
+          handleToggle(selectedDevice, isOn ? 'off' : 'on');
+        }}
+        deviceStatus={deviceStatus}
+      />
+    );
+  }
+  if (title === "Curtain-Bedroom" || title === "Curtain-Reception") {
     return (
       <CurtainModal
         visible={modalVisible}
@@ -145,7 +162,7 @@ export default function DeviceModals({
       />
     );
   }
-  if (title.includes("Flood Sensor")) {
+  if (title.includes("Flood Sensor Kitchen")) {
     return (
       <FloodSensorModal
         visible={modalVisible}
@@ -155,7 +172,7 @@ export default function DeviceModals({
       />
     );
   }
-  if (title.includes("Door/Window Sensor")) {
+  if (title.includes("Door/Window Sensor MasterBedroom") || title.includes("Door/Window Sensor Reception")) {
     return (
       <DoorWindowSensorModal
         visible={modalVisible}

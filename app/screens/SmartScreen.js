@@ -108,7 +108,7 @@ export default function SmartScreen({ navigation }) {
   const handleTabChange = (tab) => setActiveTab(tab);
 
   useEffect(() => {
-    if (modalVisible && selectedDevice && lanHeaders) {
+    if (modalVisible && selectedDevice) {
       const mode = selectedOption.toLowerCase();
       const dev = selectedDevice[mode];
       if (!dev) {
@@ -235,8 +235,8 @@ export default function SmartScreen({ navigation }) {
 
       {selectedOption === 'LAN' && !callbackRegistered && (
         <CallbackRegistration
-          deviceCallbackUrl="http://192.168.1.125/api/v1.0/callback"
-          callbackUrl="http://192.168.1.108:8080/"
+          deviceCallbackUrl="http://192.168.2.115/api/v1.0/callback"
+          callbackUrl="http://192.168.2.105:8080/"
           lanHeaders={lanHeaders}                     // Pass lanHeaders directly
           callbackId="c45e846ca23ab42c9ae469d988ae32a96"
           listenList={['device']}

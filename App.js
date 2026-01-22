@@ -11,6 +11,7 @@ const { AkuvoxModule } = NativeModules;
 const eventEmitter = new NativeEventEmitter(AkuvoxModule);
 
 export default function App() {
+  /*
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
 
@@ -18,11 +19,12 @@ export default function App() {
   useEffect(() => {
     const checkAuthStatus = async () => {
       const userToken = await AsyncStorage.getItem('userToken');
-      setIsLoggedIn(!!userToken);
+      //setIsLoggedIn(!!userToken);
     };
 
     checkAuthStatus();
   }, []);
+  */
 
   // 🔔 Listen for incoming calls
   useEffect(() => {
@@ -59,7 +61,8 @@ export default function App() {
     <StoreProvider>
       <NavigationContainer>
         <View style={{ flex: 1 }}>
-          {isLoggedIn ? <AppNavigator /> : <AuthNavigator />}
+          {/*{isLoggedIn ? <AppNavigator /> : <AuthNavigator />}*/}
+          <AuthNavigator />
         </View>
       </NavigationContainer>
     </StoreProvider>

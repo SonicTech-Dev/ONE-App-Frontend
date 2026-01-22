@@ -1,4 +1,4 @@
-const AUTH_URL = "http://192.168.1.125/api/v1.0/auth";
+const AUTH_URL = "http://192.168.2.115/api/v1.0/auth";
 
 // TODO: Replace with secure storage or env variables!
 const USERNAME = "fayis@sonictech.ae";

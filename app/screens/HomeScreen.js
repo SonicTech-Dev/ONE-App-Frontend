@@ -177,10 +177,6 @@ const HomeScreen = ({navigation}) => {
             </TouchableOpacity>
           ))}
           </ScrollView>
-
-          <View style={{paddingHorizontal:20}}>
-        <Text style={styles.greeting}>Hello</Text>
-          </View>
         <FlatList data={data} renderItem={renderItem} keyExtractor={(item) => item.id} contentContainerStyle={{paddingHorizontal:20}}/>
       
       <MenuDrawer onProfilePress={()=>onAccountDetailsPress()} visible={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} items={drawerItems} />

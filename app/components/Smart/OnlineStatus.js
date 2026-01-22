@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text } from 'react-native';
 import styled from 'styled-components/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const StatusText = styled.Text`
   font-size: 16px;
@@ -11,59 +10,32 @@ const StatusText = styled.Text`
 `;
 
 /**
- * OnlineStatus
+ * OnlineStatus (simplified to use only parent-provided token)
  *
- * Key change: for LAN we use the provided lanAuthToken prop (if present) and DO NOT fetch any WAN token.
- * If lanAuthToken is not passed, we optionally fall back to AsyncStorage (lanAuthStorageKey).
+ * This version relies exclusively on the lanAuthToken prop for LAN requests.
+ * It does NOT read from AsyncStorage or generate/refresh any tokens.
  *
  * Props:
  * - selectedOption: 'LAN' | 'WAN'
  * - pollingInterval: ms
- * - wanBackendUrl: backend proxy for WAN (unchanged)
+ * - wanBackendUrl: backend proxy for WAN
  * - lanUrl: LAN device URL
  * - requestId, deviceId, residenceId
- * - lanAuthToken: token string already available on mount (preferred)
- * - lanAuthStorageKey: optional AsyncStorage key fallback
+ * - lanAuthToken: token string provided by parent (required for LAN)
  */
 export default function OnlineStatus({
   selectedOption = 'LAN',
   pollingInterval = 30000,
   wanBackendUrl = 'http://3.227.99.254:8010/online_status/',
-  lanUrl = 'http://192.168.1.125/api/v1.0/device',
+  lanUrl = 'http://192.168.2.115/api/v1.0/device',
   requestId = 'c45e846ca23ab42c9ae469d988ae32a96',
   deviceId = 'd4f54a92bea2a440c8a6a23d0b636dcf7',
   residenceId = 'r45844047053e43d78fe5272c5badbd3a',
   lanAuthToken = null,
-  lanAuthStorageKey = null,
 }) {
   const [isOnline, setIsOnline] = useState(null);
   const [loading, setLoading] = useState(false);
   const intervalRef = useRef(null);
-
-  // Return token passed via prop or stored in AsyncStorage (if key provided).
-  const resolveLanToken = async () => {
-    if (lanAuthToken) {
-      console.log('[OnlineStatus] Using lanAuthToken prop (no WAN checks).');
-      return lanAuthToken;
-    }
-    if (!lanAuthStorageKey) return null;
-    try {
-      const raw = await AsyncStorage.getItem(lanAuthStorageKey);
-      if (!raw) return null;
-      // if stored as JSON { token: "...", expires_at: ... } handle that shape
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.token) return parsed.token;
-      } catch (_e) {
-        // not JSON, assume raw token string
-        return raw;
-      }
-      return null;
-    } catch (e) {
-      console.warn('[OnlineStatus] Error reading LAN token from AsyncStorage', e);
-      return null;
-    }
-  };
 
   useEffect(() => {
     let mounted = true;
@@ -72,7 +44,6 @@ export default function OnlineStatus({
     async function fetchStatus() {
       setLoading(true);
 
-      // Build common bodies
       const lanBody = {
         command: 'get_device_info',
         id: requestId,
@@ -86,7 +57,6 @@ export default function OnlineStatus({
 
       try {
         if (selectedOption === 'WAN') {
-          // Unchanged: call backend proxy for WAN
           console.log('[OnlineStatus] selectedOption: WAN -> calling backend proxy', wanBackendUrl);
           const res = await fetch(wanBackendUrl, {
             method: 'POST',
@@ -105,18 +75,23 @@ export default function OnlineStatus({
           return;
         }
 
-        // LAN path: use provided lanAuthToken (or AsyncStorage fallback) and DO NOT call WAN auth.
-        console.log('[OnlineStatus] selectedOption: LAN -> calling LAN URL', lanUrl);
-        const token = await resolveLanToken();
-        const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
-        if (token) {
-          // If token already includes 'Bearer ' take as-is, else prefix
-          headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        } else {
-          console.log('[OnlineStatus] No LAN token provided; sending request without Authorization header');
+        // LAN path: require a token provided by parent
+        if (!lanAuthToken) {
+          console.warn('[OnlineStatus] LAN selected but no lanAuthToken provided by parent. Marking offline.');
+          if (mounted) setIsOnline(false);
+          return;
         }
 
-        // set a fetch timeout for LAN
+        console.log('[OnlineStatus] selectedOption: LAN -> calling LAN URL', lanUrl);
+
+        const headers = {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          // If token already includes 'Bearer ' take as-is, else prefix it
+          Authorization: lanAuthToken.startsWith('Bearer ') ? lanAuthToken : `Bearer ${lanAuthToken}`,
+        };
+
+        // Set a fetch timeout for LAN
         const timeoutMs = 7000;
         const timeoutPromise = new Promise((_, reject) => {
           const id = setTimeout(() => {
@@ -135,7 +110,6 @@ export default function OnlineStatus({
         const res = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (!res.ok) {
-          // Log response body to help debug 401 issues
           let bodyText = '';
           try {
             bodyText = await res.text();
@@ -160,7 +134,7 @@ export default function OnlineStatus({
         } else if (err.message === 'timeout') {
           console.warn('[OnlineStatus] LAN fetch timeout (device unreachable?)', { url: lanUrl });
         } else {
-          console.warn('[OnlineStatus] LAN fetch error', err);
+          console.warn('[OnlineStatus] LAN/WAN fetch error', err);
         }
         if (mounted) setIsOnline(false);
       } finally {
@@ -186,7 +160,6 @@ export default function OnlineStatus({
     deviceId,
     residenceId,
     lanAuthToken,
-    lanAuthStorageKey,
   ]);
 
   if (loading && isOnline === null) {

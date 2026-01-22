@@ -12,13 +12,13 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'daff692a4120b471b8afbecda4e326ba4',
-            ability_id: 'e1d9936747c874f3592780b8886aad929',
+            device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7',
+            ability_id: 'e35705591294a47fa93b0a2886c825599',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'SpotLight Reception', location: 'Reception', status: 'On', color: '#44ad57ff', isOn: false, iconName: 'air-conditioner' ,library: 'MaterialCommunityIcons',
           lan: {
-            device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7',
+            device_id: '0c110500755c_81_1',
             ability_id: 'switch.0c110500755c_81_1',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
@@ -58,6 +58,17 @@ export const INITIAL_DEVICE_CATEGORIES = [
           wan: {
             device_id: 'd8b19bfae3b2a4591bec7686214208067',
             ability_id: 'e421c0277d65a4dc6a1fcedd4cb138148',
+            commandPair: { on: 'open', off: 'close' , stop: 'stop' }
+          }},
+          { title: 'Door/Window Sensor Reception', location: 'Reception', status: 'Off', color: '#4ac0ff', isOn: false, iconName: 'curtains' , library: 'MaterialCommunityIcons',
+          lan: {
+            device_id: 'a9d66620505f5b1bc027d929fd301662',
+            ability_id: 'binary_sensor.8a1e85371236826c0614e3ad8a287dd7',
+            commandPair: { on: 'turn_on', off: 'turn_off', stop: 'stop' }
+          },
+          wan: {
+            device_id: 'd38ba7b76db344356ba9180bc735d8020',
+            ability_id: 'ea70b8f716cca427aa18496b63f89217b',
             commandPair: { on: 'open', off: 'close' , stop: 'stop' }
           }},
         ],
@@ -112,7 +123,7 @@ export const INITIAL_DEVICE_CATEGORIES = [
           },
           wan: {
             device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba',
-            ability_id: 'e6d42554a84ad481c8ae0836d33fafbbb',
+            ability_id: 'e2da086b780454a42ba2cbba0b5fe47dc',
             commandPair: { on: 'open', off: 'close' , stop: 'stop' }
           }},
           { title: 'Hypanel Keyplus', location: 'Bedroom', status: 'On', color: '#44ad57ff', isOn: false, iconName: 'air-conditioner' ,library: 'MaterialCommunityIcons',
@@ -122,14 +133,14 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'de3ba9ed68dd84e6ba245ee97e09ccf65',
-            ability_id: 'e1d9936747c874f3592780b8886aad929',
+            device_id: 'db893d6bb4ccb45328341509674bf87bb',
+            ability_id: 'e57e427ad692a494dab0307228245385c',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'Thermostat-Bedroom', location: 'Bedroom', status: 'On', color: '#44ad57ff', isOn: false, iconName: 'air-conditioner' ,library: 'MaterialCommunityIcons',
           lan: {
-            device_id: '0c110500755c_110_11',
-            ability_id: 'switch.0c110500755c_81_1',
+            device_id: '0c11052bf1cf_110_11',
+            ability_id: 'climate.0c11052bf1cf_110_11',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
@@ -181,6 +192,17 @@ export const INITIAL_DEVICE_CATEGORIES = [
             ability_id: 'eed4bf42777764b7faaa4be691eed2c0a',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
+          { title: 'Door/Window Sensor MasterBedroom', location: 'Bedroom', status: 'Off', color: '#ffbf42', isOn: false, iconName: 'temperature-low' ,library: 'FontAwesome6',
+          lan: {
+            device_id: 'f6458582925ab50d42ce075387eed019',
+            ability_id: 'binary_sensor.86de5923d0953414a56d4ce6eea7a7be',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
+          },
+          wan: {
+            device_id: 'd7db00743bbb045ea9c23a3648b4a4d14',
+            ability_id: 'e1dcf571d6136433da67f1112f7e93c82',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
+          }},
         ],
       },
       {
@@ -188,24 +210,24 @@ export const INITIAL_DEVICE_CATEGORIES = [
         items: [
         { title: 'SpotLight MasterToilet', location: 'Bedroom Toilet', status: 'off', color: '#5d8185ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
-            device_id: 'a4441cc618293abb8d29adbf2387e18c',
-            ability_id: 'binary_sensor.dfaee6764c3eece4e8994ba1a1be56bb',
+            device_id: '5fb108b42086456593c733b564903c80',
+            ability_id: 'switch.d666a3977f2449f1872d3fcd6aa2849d',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd72f2703f8bc041828756297384186785',
-            ability_id: 'e8c90454417fa49958bbaddb9730af5d9',
+            device_id: 'ddb3f5111bf274d44b4b2eb6f653d2d46',
+            ability_id: 'e61724467cd2542a5a4f1d9a00338eca8',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'Exhaust MasterToilet', location: 'Bedroom Toilet', status: 'off', color: '#5d8185ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
-            device_id: 'a4441cc618293abb8d29adbf2387e18c',
-            ability_id: 'binary_sensor.dfaee6764c3eece4e8994ba1a1be56bb',
+            device_id: '45627db0759047e884f03c401575979d',
+            ability_id: 'switch.000d8cffb7174c4e8393dd52085a0833',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd09d8fd7910884df3ba90c0ff65749bab',
-            ability_id: 'e67c9175f62344999b49cfa21ee11e4f2',
+            device_id: 'd5aa41a8ffb3c49aaa66749a8b996979f',
+            ability_id: 'eac6624e4550748a2966a371d44400003',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
         ],
@@ -213,7 +235,7 @@ export const INITIAL_DEVICE_CATEGORIES = [
       {
         category: 'Pouder Room',
         items: [
-          { title: 'SpotLight LivingRoom', location: 'Pouder Room', status: 'off', color: '#ff00e6ff', isOn: false, iconName: 'human-greeting-variant' ,library: 'MaterialCommunityIcons',
+          { title: 'SpotLight Pouder Room', location: 'Pouder Room', status: 'off', color: '#ff00e6ff', isOn: false, iconName: 'human-greeting-variant' ,library: 'MaterialCommunityIcons',
           lan: {
             device_id: 'b3ee61e963fc08f3fce1a290ee4a503d',
             ability_id: 'switch.9a7d564af899531474785f0c04eb82f9',
@@ -224,15 +246,15 @@ export const INITIAL_DEVICE_CATEGORIES = [
             ability_id: 'e8b000d0f2d474ecdb5b4cbe5070854da',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
-          { title: 'ProfileLED LivingRoom', location: 'Pouder Room', status: 'off', color: '#ff00e6ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
+          { title: 'ProfileLED Pouder Room', location: 'Pouder Room', status: 'off', color: '#ff00e6ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
-            device_id: 'b3ee61e963fc08f3fce1a290ee4a503d',
-            ability_id: 'switch.9a7d564af899531474785f0c04eb82f9',
+            device_id: 'b9960f33e83342149f30d0bf8476fb90',
+            ability_id: 'switch.c9951caa64284cb4a205d2d221848e02',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd34a26148532f44119212af8a0be2d466',
-            ability_id: 'e7f06a9b903384e9c8f7bece392242250',
+            device_id: 'd5186497b45754cc4ac58b94309aa741d',
+            ability_id: 'e4fd5d0017df8483b8f7a429c7cc93361',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
         ],
@@ -284,6 +306,17 @@ export const INITIAL_DEVICE_CATEGORIES = [
             ability_id: 'ef99fe4dbb2144ae48139a9aef6491630',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
+          { title: 'Flood Sensor Kitchen', location: 'Kitchen', status: 'On', color: '#8e44ad', isOn: false, iconName: 'bulb' ,library: 'Ionicons',
+          lan: {
+            device_id: 'b2cde7130cd1c35cbc2156651d2757ae',
+            ability_id: 'binary_sensor.b9a5b821238f095d4ee0dca7595f7857',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
+          },
+          wan: {
+            device_id: 'da7ac9c74feaf4719a4e1efb073031768',
+            ability_id: 'e8996edcfea8c46609714a6fd457699f8',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
+          }},
         ],
       },
       {
@@ -327,7 +360,7 @@ export const INITIAL_DEVICE_CATEGORIES = [
               {
         category: 'Balcony',
         items: [
-          { title: 'SpotLight Balcony', location: 'Balcony', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
+          { title: 'SpotLight Bedroom-Balcony', location: 'Balcony', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
           lan: {
             device_id: '0c110500755c_101_1',
             ability_id: 'switch.0c110500755c_101_1',
@@ -338,7 +371,7 @@ export const INITIAL_DEVICE_CATEGORIES = [
             ability_id: 'eafa9ee6cebed410f801df0f2fd52df38',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
-          { title: 'ProfileLED Balcony', location: 'Balcony', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
+          { title: 'ProfileLED Bedroom-Balcony', location: 'Balcony', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
           lan: {
             device_id: '0c110500755c_102_1',
             ability_id: 'switch.0c110500755c_102_1',
@@ -349,7 +382,7 @@ export const INITIAL_DEVICE_CATEGORIES = [
             ability_id: 'ed2b29c985085412e839c7d5694db18e2',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
-          { title: 'SpotLight Balcony', location: 'Balcony', status: 'On', color: '#00eeffff', isOn: false, iconName: 'door-sliding-lock' ,library: 'MaterialCommunityIcons',
+          { title: 'SpotLight Reception-Balcony', location: 'Balcony', status: 'On', color: '#00eeffff', isOn: false, iconName: 'door-sliding-lock' ,library: 'MaterialCommunityIcons',
           lan: {
             device_id: '0c110500755c_103_1',
             ability_id: 'switch.0c110500755c_103_1',
@@ -360,7 +393,7 @@ export const INITIAL_DEVICE_CATEGORIES = [
             ability_id: 'e654b2d73661947db9e1a963a0d1ef398',
             commandPair: { on: 'lock', off: 'unlock' }
           }},
-          { title: 'ProfileLED Balcony', location: 'Balcony', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
+          { title: 'ProfileLED Reception-Balcony', location: 'Balcony', status: 'On', color: '#00eeffff', isOn: false, iconName: 'radio-button-on' ,library: 'Ionicons',
           lan: {
             device_id: '0c110500755c_104_1',
             ability_id: 'switch.0c110500755c_104_1',
@@ -400,8 +433,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
         items: [
           { title: 'Thermostat-Entrance', location: 'Entrance', status: 'off', color: '#ff0000ff', isOn: false, iconName: 'pipe-valve' , library: 'MaterialCommunityIcons',
           lan: {
-            device_id: '0c11052bf1cf_110_11',
-            ability_id: 'switch.0c110500755c_61_1',
+            device_id: '0c11052bf1cf_120_11',
+            ability_id: 'climate.0c11052bf1cf_120_11',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
@@ -429,6 +462,17 @@ export const INITIAL_DEVICE_CATEGORIES = [
           wan: {
             device_id: 'd9e951b49ea37493080d28d47eb7196d5',
             ability_id: 'e8a6e2b96d60e4cf694bf2975b08710fc',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
+          }},
+          { title: 'F2 SmartLock', location: 'Entrance', status: 'On', color: '#ff0000ff', isOn: false, iconName: 'bulb' ,library: 'Ionicons',
+          lan: {
+            device_id: '59f7a5f5329971d39a9e01301bf36456',
+            ability_id: 'lock.86dba9bc8424738f9775182cd3c9bdb9',
+            commandPair: { on: 'turn_on', off: 'turn_off' }
+          },
+          wan: {
+            device_id: 'd84b7467ccfc24abdabe01ff7d0714e88',
+            ability_id: 'e22a6f31e094a4f80b005aed248649471',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
         ],

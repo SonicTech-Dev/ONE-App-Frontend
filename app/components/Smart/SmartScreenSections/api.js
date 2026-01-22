@@ -12,7 +12,7 @@ export const controlDevice = async (
   const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
 
   if (isLAN) {
-    const lanApiUrl = `http://192.168.1.125/api/v1.0/device`;
+    const lanApiUrl = `http://192.168.2.115/api/v1.0/device`;
     const body = {
       command: "control_device",
       id: "c45e846ca23ab42c9ae469d988ae32a96",
@@ -33,7 +33,6 @@ export const controlDevice = async (
       });
 
       if (response.ok) {
-        Alert.alert('Success', `Device controlled locally!`);
       } else {
         Alert.alert('Error', 'LAN control failed. Please check device connection.');
       }
@@ -69,7 +68,6 @@ export const controlDevice = async (
       });
 
       if (response.ok) {
-        Alert.alert('Success', `Device controlled successfully!`);
       } else {
         Alert.alert('Error', 'Something went wrong. Please try again.');
       }
@@ -90,7 +88,7 @@ export const deviceStatus = async (
   const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
 
   if (isLAN) {
-    const lanApiUrl = `http://192.168.1.125/api/v1.0/device`;
+    const lanApiUrl = `http://192.168.2.115/api/v1.0/device`;
     const body = {
       command: 'get_device_info',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
@@ -108,7 +106,6 @@ export const deviceStatus = async (
       if (response.ok) {
         const data = await response.json();
         setSelectedDeviceStatus(data);
-        Alert.alert('Success', `Device status retrieved locally!`);
       } else {
         Alert.alert('Error', 'LAN control failed. Please check device connection.');
       }
@@ -138,7 +135,6 @@ export const deviceStatus = async (
       if (response.ok) {
         const data = await response.json();
         setSelectedDeviceStatus(data);
-        Alert.alert('Success', `Device status retrieved successfully!`);
       } else {
         Alert.alert('Error', 'Something went wrong. Please try again.');
       }

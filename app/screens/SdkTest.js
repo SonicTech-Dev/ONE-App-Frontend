@@ -153,7 +153,7 @@ export default function SdkContactScreen() {
   const handleRegisterSipLan = async () => {
     try {
       const result = await Akuvox.registerSipLan(
-        "4cUSgR92G0HEVtdqewd7AYuI0KWQwB2nk5nrvxIUD3s0kxU/Y/u/GMrpOy/8dgbPjgqHFZLxW2k5qB0vsk2MAnJtJHzgeTWl3i7CADQQ1YE=",
+        "4cUSgR92G0HEVtdqewd7AT4zS22YVQVM1/7OlVH7QnsnwtqrXdLYVtz8poL/nhWnUEVM7QTea2rWri23BdQHUxyhWOz3IuzWo9o/S3hS93c=",
         "User bela"
       );
       // On success set registered transport to LAN
