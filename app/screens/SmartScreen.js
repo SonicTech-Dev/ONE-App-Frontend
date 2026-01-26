@@ -153,7 +153,7 @@ export default function SmartScreen({ navigation }) {
 
   // This function updates device state based on callback payload
   const handleRequest = (req, payload) => {
-    console.log('Callback API received:', { req, payload });
+    //console.log('Callback API received:', { req, payload });
 
     // Check payload structure (e.g., event_type, device data)
     if (
