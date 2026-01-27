@@ -8,6 +8,8 @@ export default function DeviceGrid({
   handleToggle,
   navigation,
   setSelectedDevice,
+  selectedOption,
+  lanHeaders,
   setModalVisible,
   activeTab, // Use activeTab to determine which tab is selected
 }) {
@@ -51,9 +53,14 @@ export default function DeviceGrid({
               isOn={false}
               iconName="sensor-door"
               library="MaterialIcons"
-              onPress={() => navigation.navigate('IntercomScreen')}
-              disabled={false}
-            />
+              onPress={() => navigation.navigate('IntercomScreen', {
+                    selectedOption,           // 'LAN' or 'WAN'
+                    deviceId: '0C11052C6E92',
+                    lanRtspUrl: 'rtsp://admin:Sonic123@192.168.2.114:',
+                    wanRtspUrl: 'rtsp://user:J19IE753w25867v6@35.156.199.213:554/0C11052C6E92',
+                    LAN_HEADERS: lanHeaders
+                    })}
+              disabled={false} />
           </View>
         </>
       )}
@@ -80,6 +87,7 @@ export default function DeviceGrid({
                   library={device.library}
                   onToggle={(newControl) => handleToggle(device, newControl)}
                   disabled={!device.lan?.commandPair}
+                  selectedOption={selectedOption}
                   onPress={() => {
                     setSelectedDevice(device);
                     setModalVisible(true);

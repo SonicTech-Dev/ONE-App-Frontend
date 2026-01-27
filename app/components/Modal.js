@@ -16,10 +16,12 @@ import CoSensorModal from './Smart/Sensors/CoSensor';
 import C6LockModal from './Smart/SmartLock/C6Lock';
 import F2LockModal from './Smart/SmartLock/F2Lock';
 import FourGangSwitchModal from './Smart/Switches/FourGangTouch';
+import R29Intercom from './Smart/Intercom/Intercom'
 
 export default function DeviceModals({
   selectedDevice,
   modalVisible,
+  selectedOption,
   setModalVisible,
   handleToggle,
   handleSetPosition,
@@ -245,6 +247,18 @@ export default function DeviceModals({
   if (title.includes("4 Gang Switch")) {
     return (
       <FourGangSwitchModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        device={selectedDevice}
+        deviceStatus={deviceStatus}
+        switchAbilityName={selectedDevice}
+        onToggleSwitch={(deviceName, newState) => handleToggle(selectedDevice, newState) }
+      />
+    );
+  }
+  if (title.includes("R29 Intercom")) {
+    return (
+      <R29Intercom
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         device={selectedDevice}

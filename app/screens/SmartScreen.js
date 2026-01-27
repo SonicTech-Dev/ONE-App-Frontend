@@ -345,6 +345,7 @@ export default function SmartScreen({ navigation }) {
         navigation={navigation}
         setSelectedDevice={setSelectedDevice}
         setModalVisible={setModalVisible}
+        lanHeaders={lanHeaders}
         selectedOption={selectedOption}
         activeTab={activeTab}
       />

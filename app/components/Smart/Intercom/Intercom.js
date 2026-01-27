@@ -1,256 +1,135 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  NativeEventEmitter,
-  NativeModules,
   Alert,
-  Platform,
-  PermissionsAndroid,
+  Dimensions,
 } from 'react-native';
-import { requireNativeComponent } from 'react-native';
+import RTSPViewer from './RTSPViewer';
 
-const { Akuvox } = NativeModules;
-const SmartLockMonitorView = requireNativeComponent('SmartLockMonitorView');
+const FALLBACK_LAN_RTSP_URL = 'rtsp://admin:Sonic123@192.168.2.114:';
+const FALLBACK_WAN_RTSP_URL = 'rtsp://user:J19IE753w25867v6@35.156.199.213:554/0C11052C6E92';
+const FALLBACK_DEVICE_ID = '0C11052C6E92';
+const BACKEND_CONTROL_URL = 'http://3.227.99.254:8010/control_devices/';
 
-async function requestPermissionsIfNeeded() {
-  if (Platform.OS === 'android') {
-    const camera = PermissionsAndroid.PERMISSIONS.CAMERA;
-    const audio = PermissionsAndroid.PERMISSIONS.RECORD_AUDIO;
-    const granted = await PermissionsAndroid.requestMultiple([camera, audio]);
-    return (
-      granted[camera] === PermissionsAndroid.RESULTS.GRANTED &&
-      granted[audio] === PermissionsAndroid.RESULTS.GRANTED
-    );
-  }
-  return true;
-}
+export default function Intercom({ route }) {
+  const params = route?.params || {};
 
-export default function IntercomScreen() {
-  const [mode, setMode] = useState('LAN'); // 'LAN' | 'WAN'
-  const [deviceId, setDeviceId] = useState(''); // for LAN
-  const [userId, setUserId] = useState('');     // optional, not used by listener but logged
-  const [rtspUrl, setRtspUrl] = useState('');   // for WAN or to inspect LAN returned URL
-  const [ciphertext, setCiphertext] = useState('q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9ydX3MDyvYiKsuodonqmKjAg3PpmfEezF76tQNBNbDBztjSHe+Nkz8Yb01jkqtln2qdX8FKQyk/Rzza1ZYAjJzS6DBgcGhLNpwPz7jrjOF1v'); // for WAN
-  const [monitorId, setMonitorId] = useState(null);
-  const [status, setStatus] = useState('Idle');
+  // Accept selectedOption props and normalize
+  const selectedOptionRaw = params.selectedOption || 'LAN';
+  const isLAN = String(selectedOptionRaw).toLowerCase() === 'lan';
+  const selectedOption = isLAN ? 'LAN' : 'WAN';
 
-  const eventEmitter = useMemo(() => new NativeEventEmitter(Akuvox), []);
+  // RTSP URLs and device info
+  const deviceId = params.deviceId || FALLBACK_DEVICE_ID;
+  const lanRtspUrl = params.lanRtspUrl || FALLBACK_LAN_RTSP_URL;
+  const wanRtspUrl = params.wanRtspUrl || FALLBACK_WAN_RTSP_URL;
 
-  // Subscribe to SDK events
-  useEffect(() => {
-    const subs = [
-      eventEmitter.addListener('onSmartLockRtsp', (p) => {
-        if (p?.status === 'rtspReady' && mode === 'LAN') {
-          setRtspUrl(p.rtspUrl);
+  // Receive LAN headers via props
+  const LAN_HEADERS = params.LAN_HEADERS || null;
+
+  // Pick the correct RTSP feed based on selectedOption
+  const uri = useMemo(
+    () => (isLAN ? lanRtspUrl : wanRtspUrl),
+    [isLAN, lanRtspUrl, wanRtspUrl]
+  );
+
+  const onPressUnlockDoor = async () => {
+    try {
+      if (isLAN) {
+        if (!LAN_HEADERS || typeof LAN_HEADERS !== 'object') {
+          Alert.alert('Missing headers', 'LAN_HEADERS were not provided.');
+          return;
         }
-        if (p?.status === 'rtspStop' && mode === 'LAN') {
-          setStatus('RTSP stopped by device');
-        }
-      }),
-      eventEmitter.addListener('onMonitorEstablished', (p) => {
-        if (typeof p?.monitorId === 'number') {
-          setMonitorId(p.monitorId);
-          setStatus('Monitor established');
-        }
-      }),
-      eventEmitter.addListener('onMonitorLoadSurfaceView', () => {
-        // SurfaceView refreshed; no-op except maybe UI logging
-      }),
-      eventEmitter.addListener('onMonitorFinished', () => {
-        setStatus('Monitor finished');
-        setMonitorId(null);
-      }),
-      eventEmitter.addListener('onRtspError', (p) => {
-        setStatus(`RTSP error: ${p?.error || 'unknown'}`);
-      }),
-    ];
-    return () => subs.forEach(s => s.remove());
-  }, [eventEmitter, mode]);
+        const lanApiUrl = `http://192.168.2.115/api/v1.0/device`;
+        const body = {
+          command: 'control_device',
+          id: 'c45e846ca23ab42c9ae469d988ae32a96',
+          param: {
+            device_id: deviceId,
+            ability_id: `doorphone.${deviceId}`,
+            action: 'unlock',
+            attribute: {
+              lock: [0],
+            },
+          },
+        };
 
-  // Init SDK on mount (safe to call again; your SmartScreen also does this)
-  useEffect(() => {
-    (async () => {
-      const ok = await requestPermissionsIfNeeded();
-      if (!ok) {
-        Alert.alert('Permission Denied', 'Camera and microphone permissions are required.');
-        return;
-      }
-      try {
-        Akuvox?.initSdk?.();
-      } catch (e) {
-        Alert.alert('SDK Init Error', e?.message || 'Failed to initialize SDK');
-      }
-    })();
-  }, []);
+        const resp = await fetch(lanApiUrl, {
+          method: 'POST',
+          headers: LAN_HEADERS,
+          body: JSON.stringify(body),
+        });
 
-  const startLanMonitor = async () => {
-    if (!deviceId) {
-      Alert.alert('Missing deviceId', 'Enter the lock/intercom deviceId for LAN.');
-      return;
-    }
-    try {
-      setStatus('Preparing video start...');
-      Akuvox.setRtspMessageListener(deviceId, userId || '');
-      const res = await Akuvox.prepareVideoStart(deviceId);
-      // RTSP URL will arrive via onSmartLockRtsp(rtspReady)
-      setStatus('Waiting for rtspReady...');
-    } catch (e) {
-      Alert.alert('LAN Monitor Error', e?.message || 'Failed to prepare video.');
-    }
-  };
-
-  // When rtspUrl is updated (from rtspReady), start monitor via LAN
-  useEffect(() => {
-    (async () => {
-      if (mode !== 'LAN') return;
-      if (!rtspUrl || !deviceId) return;
-      try {
-        setStatus('Starting LAN monitor...');
-        const params = await Akuvox.startMonitorViaLAN(rtspUrl, deviceId);
-        setMonitorId(params?.monitorId ?? null);
-        setStatus('LAN monitor started');
-      } catch (e) {
-        Alert.alert('LAN Monitor Error', e?.message || 'Failed to start LAN monitor.');
-      }
-    })();
-  }, [rtspUrl, deviceId, mode]);
-
-  const stopLanMonitor = async () => {
-    try {
-      setStatus('Stopping LAN monitor...');
-      if (deviceId) Akuvox.stopVideoViaLAN(deviceId);
-      if (monitorId !== null) Akuvox.finishMonitor(monitorId);
-      Akuvox.clearRtspMessageListener();
-      setMonitorId(null);
-      setStatus('LAN monitor stopped');
-    } catch (e) {
-      Alert.alert('Stop Error', e?.message || 'Failed to stop LAN monitor.');
-    }
-  };
-
-  const startWanMonitor = async () => {
-    if (!rtspUrl || !ciphertext) {
-      Alert.alert('Missing WAN fields', 'Enter RTSP URL and ciphertext.');
-      return;
-    }
-    try {
-      setStatus('Starting WAN monitor...');
-      const params = await Akuvox.startWanMonitor(rtspUrl, ciphertext);
-      setMonitorId(params?.monitorId ?? null);
-      setStatus('WAN monitor started');
-    } catch (e) {
-      Alert.alert('WAN Monitor Error', e?.message || 'Failed to start WAN monitor.');
-    }
-  };
-
-  const stopWanMonitor = async () => {
-    try {
-      setStatus('Stopping WAN monitor...');
-      if (monitorId !== null) Akuvox.finishMonitor(monitorId);
-      setMonitorId(null);
-      setStatus('WAN monitor stopped');
-    } catch (e) {
-      Alert.alert('Stop Error', e?.message || 'Failed to stop WAN monitor.');
-    }
-  };
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      try {
-        if (mode === 'LAN') {
-          if (deviceId) Akuvox.stopVideoViaLAN(deviceId);
-          if (monitorId !== null) Akuvox.finishMonitor(monitorId);
-          Akuvox.clearRtspMessageListener();
+        if (resp.ok) {
+          Alert.alert('Success', 'Door unlocked via LAN.');
         } else {
-          if (monitorId !== null) Akuvox.finishMonitor(monitorId);
+          Alert.alert('Error', 'LAN control failed. Please check device connection.');
         }
-      } catch {}
-    };
-  }, [mode, deviceId, monitorId]);
+      } else {
+        const apiUrl = BACKEND_CONTROL_URL;
+        const body = {
+          command: 'trigger_akuvox_remote_open_door',
+          id: 'c45e846ca23ab42c9ae469d988ae32a96',
+          param: {
+            mac: deviceId,
+            residence_id: 'r45844047053e43d78fe5272c5badbd3a',
+            relay_id: '0',
+          },
+        };
+
+        const resp = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (resp.ok) {
+          Alert.alert('Success', 'Door unlocked via WAN (backend).');
+        } else {
+          Alert.alert('Error', 'WAN control failed. Please try again.');
+        }
+      }
+    } catch (err) {
+      console.error('Unlock error:', err);
+      Alert.alert('Error', 'Failed to trigger unlock. Please check your connection.');
+    }
+  };
+
+  const { width } = Dimensions.get('window');
+  const playerHeight = Math.round((width * 9) / 16); // 16:9 player
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Intercom Monitor</Text>
-        <View style={styles.segment}>
-          <TouchableOpacity
-            style={[styles.segmentBtn, mode === 'LAN' && styles.segmentActive]}
-            onPress={() => setMode('LAN')}
-          >
-            <Text style={[styles.segmentText, mode === 'LAN' && styles.segmentTextActive]}>LAN</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.segmentBtn, mode === 'WAN' && styles.segmentActive]}
-            onPress={() => setMode('WAN')}
-          >
-            <Text style={[styles.segmentText, mode === 'WAN' && styles.segmentTextActive]}>WAN</Text>
-          </TouchableOpacity>
+        <Text style={styles.title}>Intercom</Text>
+        <View style={styles.modeChip}>
+          <Text style={styles.modeChipText}>Mode: {selectedOption}</Text>
         </View>
-        <Text style={styles.status}>Status: {status}</Text>
       </View>
 
-      {mode === 'LAN' ? (
-        <View style={styles.form}>
-          <TextInput
-            placeholder="Device ID"
-            value={deviceId}
-            onChangeText={setDeviceId}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="User ID (optional)"
-            value={userId}
-            onChangeText={setUserId}
-            style={styles.input}
-          />
-          <View style={styles.row}>
-            <TouchableOpacity style={styles.primary} onPress={startLanMonitor}>
-              <Text style={styles.btnText}>Start LAN Monitor</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondary} onPress={stopLanMonitor}>
-              <Text style={styles.btnText}>Stop</Text>
-            </TouchableOpacity>
-          </View>
+      {/* Camera view */}
+      <View style={styles.content}>
+        <View style={[styles.playerContainer, { height: playerHeight }]}>
+          <RTSPViewer uri={uri} style={styles.player} />
         </View>
-      ) : (
-        <View style={styles.form}>
-          <TextInput
-            placeholder="RTSP URL"
-            value={rtspUrl}
-            onChangeText={setRtspUrl}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="Ciphertext"
-            value={ciphertext}
-            onChangeText={setCiphertext}
-            style={styles.input}
-          />
-          <View style={styles.row}>
-            <TouchableOpacity style={styles.primary} onPress={startWanMonitor}>
-              <Text style={styles.btnText}>Start WAN Monitor</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondary} onPress={stopWanMonitor}>
-              <Text style={styles.btnText}>Stop</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
-      <View style={styles.monitorContainer}>
-        {monitorId !== null ? (
-          <SmartLockMonitorView style={styles.monitor} monitorId={monitorId} />
-        ) : (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>No monitor started</Text>
-          </View>
-        )}
+        {/* Unlock button */}
+        <View style={styles.controls}>
+          <TouchableOpacity
+            style={[styles.button, styles.buttonPrimary]}
+            onPress={onPressUnlockDoor}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.buttonText}>Unlock Door</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -258,32 +137,47 @@ export default function IntercomScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#0b132b' },
-  header: { padding: 16, backgroundColor: '#1c2541' },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#1c2541',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#2d3a5f',
+  },
   title: { color: '#fff', fontSize: 20, fontWeight: '700' },
-  segment: { flexDirection: 'row', marginTop: 12 },
-  segmentBtn: {
-    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16,
-    backgroundColor: '#3a506b', marginRight: 8,
+  modeChip: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#2d3a5f',
   },
-  segmentActive: { backgroundColor: '#5bc0be' },
-  segmentText: { color: '#a1b2c3', fontWeight: '600' },
-  segmentTextActive: { color: '#0b132b' },
-  status: { marginTop: 12, color: '#cde7f2' },
-  form: { padding: 16, backgroundColor: '#1c2541' },
-  input: {
-    backgroundColor: '#3a506b', color: '#fff', padding: 10, borderRadius: 8,
-    marginBottom: 10,
+  modeChipText: { color: '#cde7f2', fontSize: 12, fontWeight: '600' },
+
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
+  playerContainer: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#000',
   },
-  row: { flexDirection: 'row', justifyContent: 'space-between' },
-  primary: {
-    backgroundColor: '#5bc0be', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, flex: 1, marginRight: 8,
+  player: { width: '100%', height: '100%' },
+
+  controls: {
+    marginTop: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  secondary: {
-    backgroundColor: '#6c757d', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, flex: 1, marginLeft: 8,
+  button: {
+    minWidth: 200,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
   },
-  btnText: { color: '#0b132b', fontWeight: '700', textAlign: 'center' },
-  monitorContainer: { flex: 1, backgroundColor: '#0b132b' },
-  monitor: { flex: 1, backgroundColor: '#000' },
-  placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  placeholderText: { color: '#6c757d' },
+  buttonPrimary: {
+    backgroundColor: '#5bc0be',
+  },
+  buttonText: { color: '#0b132b', fontWeight: '700', fontSize: 16, textAlign: 'center' },
 });

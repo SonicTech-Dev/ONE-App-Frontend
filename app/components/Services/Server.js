@@ -35,10 +35,6 @@ export default function CallbackServer({ port = 8080, onRequest }) {
       const payload = parsePayload(req);
       setLastPayload(payload);
       // Log only the JSON payload, fully expanded
-      console.log(
-        'LANServer: Received POST body:',
-        JSON.stringify(payload, null, 2)
-      );
       if (onRequest) onRequest(req, payload);
       return { message: 'Received JSON data' };
     });

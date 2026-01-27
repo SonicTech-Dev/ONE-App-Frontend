@@ -189,7 +189,7 @@ export default function SmartLockScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.title}>Smart Lock</Text>
+      <Text style={styles.title}>SL50 Smart Lock</Text>
       <View style={styles.lockCard}>
         <Text style={styles.lockCardTitle}>Unlock Your Door</Text>
         <TouchableOpacity
