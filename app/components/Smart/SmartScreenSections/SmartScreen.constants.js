@@ -210,19 +210,19 @@ export const INITIAL_DEVICE_CATEGORIES = [
         items: [
         { title: 'SpotLight MasterToilet', location: 'Bedroom Toilet', status: 'off', color: '#5d8185ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
-            device_id: '5fb108b42086456593c733b564903c80',
-            ability_id: 'switch.d666a3977f2449f1872d3fcd6aa2849d',
+            device_id: 'feec1e0f811aec3eb21e38fdd736643c',
+            ability_id: 'switch.4d6c89ded335d3e2d47b86c987e64ef5',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'd9e5c0be5d1354140b9a6762a189afc67',
-            ability_id: 'e5e51b6f2cb2342d79f040c1fcd394902',
+            device_id: 'ddb3f5111bf274d44b4b2eb6f653d2d46',
+            ability_id: 'e61724467cd2542a5a4f1d9a00338eca8',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'Exhaust MasterToilet', location: 'Bedroom Toilet', status: 'off', color: '#5d8185ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
-            device_id: '45627db0759047e884f03c401575979d',
-            ability_id: 'switch.000d8cffb7174c4e8393dd52085a0833',
+            device_id: 'ffac083649758a3275de884e4969f1de',
+            ability_id: 'switch.8267bce41a4be7d3fff077b95f54bdcf',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {

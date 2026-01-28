@@ -62,6 +62,20 @@ export default function DeviceGrid({
                     })}
               disabled={false} />
           </View>
+          <View style={styles.sdkTestTileRow}>
+            <DeviceTile
+              title="IP Camera Screen"
+              location="Entrance"
+              status=""
+              color="#7b888fff"
+              isOn={false}
+              iconName="sensor-door"
+              library="MaterialIcons"
+              onPress={() => navigation.navigate('IPCameraScreen', {
+                    selectedOption,           // 'LAN' or 'WAN'
+                    })}
+              disabled={false} />
+          </View>
         </>
       )}
       {/* Device Tiles */}

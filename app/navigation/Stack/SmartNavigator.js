@@ -6,6 +6,7 @@ import SdkTest from "../../screens/SdkTest"; // <-- Import your SDK Usage screen
 import SmartLockScreen from "../../components/Smart/SmartLock/SmartLockScreen";
 import IntercomScreen from "../../components/Smart/Intercom/Intercom"
 import DeviceStatuses from "../../components/Smart/DeviceStatuses";
+import IPCamera from "../../components/Smart/IPCameras/IPCamera";
 const Stack = createStackNavigator();
 
 const SmartNavigator = ({ route, navigation }) => {
@@ -54,6 +55,15 @@ const SmartNavigator = ({ route, navigation }) => {
         options={{
           headerShown: true,
           title: "All Devices Status",
+          headerTitleStyle: { color: 'black' },
+        }}
+      />
+      <Stack.Screen
+        name="IPCameraScreen"
+        component={IPCamera}
+        options={{
+          headerShown: true,
+          title: "IP Camera Screen",
           headerTitleStyle: { color: 'black' },
         }}
       />
