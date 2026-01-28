@@ -17,6 +17,9 @@ import C6LockModal from './Smart/SmartLock/C6Lock';
 import F2LockModal from './Smart/SmartLock/F2Lock';
 import FourGangSwitchModal from './Smart/Switches/FourGangTouch';
 import R29Intercom from './Smart/Intercom/Intercom'
+import HyPanelSupremeModal from './Smart/Hypanel/HypanelSupreme';
+import HyPanelLuxModal from './Smart/Hypanel/HypanelLux';
+import HyPanelKeyPlusModal from './Smart/Hypanel/HypanelKeyplus';
 
 export default function DeviceModals({
   selectedDevice,
@@ -259,6 +262,42 @@ export default function DeviceModals({
   if (title.includes("R29 Intercom")) {
     return (
       <R29Intercom
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        device={selectedDevice}
+        deviceStatus={deviceStatus}
+        switchAbilityName={selectedDevice}
+        onToggleSwitch={(deviceName, newState) => handleToggle(selectedDevice, newState) }
+      />
+    );
+  }
+  if (title.includes("Hypanel Supreme")) {
+    return (
+      <HyPanelSupremeModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        device={selectedDevice}
+        deviceStatus={deviceStatus}
+        switchAbilityName={selectedDevice}
+        onToggleSwitch={(deviceName, newState) => handleToggle(selectedDevice, newState) }
+      />
+    );
+  }
+  if (title.includes("Hypanel Lux")) {
+    return (
+      <HyPanelLuxModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        device={selectedDevice}
+        deviceStatus={deviceStatus}
+        switchAbilityName={selectedDevice}
+        onToggleSwitch={(deviceName, newState) => handleToggle(selectedDevice, newState) }
+      />
+    );
+  }
+  if (title.includes("Hypanel Keyplus")) {
+    return (
+      <HyPanelKeyPlusModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         device={selectedDevice}
