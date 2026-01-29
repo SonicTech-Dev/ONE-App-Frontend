@@ -188,8 +188,8 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'da4896d0398fc4f33a9856b45285dd430',
-            ability_id: 'e092f0415d239442891fdfae1eb401380',
+            device_id: 'd668ecd0a7bf44daeb92c8c089bef5538',
+            ability_id: 'eed4bf42777764b7faaa4be691eed2c0a',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'Door/Window Sensor MasterBedroom', location: 'Bedroom', status: 'Off', color: '#ffbf42', isOn: false, iconName: 'temperature-low' ,library: 'FontAwesome6',
@@ -242,19 +242,19 @@ export const INITIAL_DEVICE_CATEGORIES = [
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'dfd1b3eb1c89944f6bc3c6b8c06ac765f',
-            ability_id: 'e79384443dd3a43579bde62f291704b7e',
+            device_id: 'd9c52afe868ae4b37bfb726bc37893e7c',
+            ability_id: 'e8b000d0f2d474ecdb5b4cbe5070854da',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
           { title: 'ProfileLED Pouder Room', location: 'Pouder Room', status: 'off', color: '#ff00e6ff', isOn: false, iconName: 'sensor-window' ,library: 'MaterialIcons',
           lan: {
-            device_id: 'b9960f33e83342149f30d0bf8476fb90',
-            ability_id: 'switch.c9951caa64284cb4a205d2d221848e02',
+            device_id: '06451c8ac8ca20141e4fbbac7273ffe3',
+            ability_id: 'switch.4ecc54d837f6418e30b1ede328a03b58',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           },
           wan: {
-            device_id: 'dec5df209ae2e47b19bcb514e9f0dc922',
-            ability_id: 'edd4398c68be9476d86cf886a59037e50',
+            device_id: 'd5186497b45754cc4ac58b94309aa741d',
+            ability_id: 'e4fd5d0017df8483b8f7a429c7cc93361',
             commandPair: { on: 'turn_on', off: 'turn_off' }
           }},
         ],
