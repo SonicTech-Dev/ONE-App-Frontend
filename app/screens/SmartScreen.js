@@ -82,7 +82,7 @@ export default function SmartScreen({ navigation }) {
     };
   }, []);
 
-  // Build LAN headers when LAN is selected
+  // Keep the old behavior: build LAN headers when LAN is selected
   useEffect(() => {
     if (selectedOption === 'LAN') {
       if (!lanHeaders) {
@@ -101,21 +101,16 @@ export default function SmartScreen({ navigation }) {
       setLanHeaders(null);
       setCallbackRegistered(false); // reset registration if leaving LAN
     }
-  }, [selectedOption]);
+  }, [selectedOption, lanHeaders]);
 
   // Auto register SIP whenever selectedOption changes (LAN/WAN),
-  // after SDK init and (for LAN) when headers are available
+  // after SDK init
   useEffect(() => {
     const register = async () => {
       if (!sipInitialized) return;
 
       try {
         if (selectedOption === 'LAN') {
-          // Wait for LAN headers for better readiness on local network
-          if (!lanHeaders) {
-            console.log('[SmartScreen] Waiting for LAN headers before LAN SIP registration...');
-            return;
-          }
           if (lastRegisteredTransport !== 'lan') {
             console.log('[SmartScreen] Registering SIP via LAN...');
             const res = await Akuvox.registerSipLan(LAN_SIP_TOKEN, 'User bela');
@@ -139,7 +134,7 @@ export default function SmartScreen({ navigation }) {
     };
 
     register();
-  }, [sipInitialized, selectedOption, lanHeaders, lastRegisteredTransport]);
+  }, [sipInitialized, selectedOption, lastRegisteredTransport]);
 
   useEffect(() => {
     if (
@@ -153,9 +148,6 @@ export default function SmartScreen({ navigation }) {
 
   // This function updates device state based on callback payload
   const handleRequest = (req, payload) => {
-    //console.log('Callback API received:', { req, payload });
-
-    // Check payload structure (e.g., event_type, device data)
     if (
       payload?.event_type === 'device' &&
       payload?.data?.payload?.device_id &&
@@ -164,7 +156,6 @@ export default function SmartScreen({ navigation }) {
       payload.data.payload.abilities.forEach((ability) => {
         const deviceId = payload.data.payload.device_id;
         const state = ability.state; // "on" or "off"
-        // Update deviceCategories state for LAN devices
         setDeviceCategories((prevCats) =>
           prevCats.map((cat) => ({
             ...cat,
@@ -198,6 +189,7 @@ export default function SmartScreen({ navigation }) {
 
   const handleTabChange = (tab) => setActiveTab(tab);
 
+  // Always rebuild LAN headers right before status requests
   useEffect(() => {
     if (modalVisible && selectedDevice) {
       const mode = selectedOption.toLowerCase();
@@ -206,11 +198,14 @@ export default function SmartScreen({ navigation }) {
         setSelectedDeviceStatus(null);
         return;
       }
-      deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, lanHeaders);
+      (async () => {
+        const headers = selectedOption === 'LAN' ? await buildLanHeaders() : null;
+        deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, headers);
+      })();
     } else {
       setSelectedDeviceStatus(null);
     }
-  }, [modalVisible, selectedDevice, selectedOption, lanHeaders]);
+  }, [modalVisible, selectedDevice, selectedOption]);
 
   const handleToggle = async (device, newControl) => {
     const mode = selectedOption.toLowerCase();
@@ -231,7 +226,7 @@ export default function SmartScreen({ navigation }) {
       }))
     );
     const command = dev.commandPair[newControl];
-    const headers = lanHeaders;
+    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : null;
     controlDevice(dev.device_id, dev.ability_id, command, null, selectedOption, headers);
     deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, headers);
   };
@@ -247,7 +242,7 @@ export default function SmartScreen({ navigation }) {
     const attribute = mode === 'lan'
       ? { position }
       : { position_percent: position };
-    const headers = lanHeaders || (await buildLanHeaders());
+    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : null;
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -262,7 +257,7 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { preset_temperature: temperature };
     const command = dev.commandPair['on'];
-    const headers = lanHeaders || (await buildLanHeaders());
+    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : null;
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -277,7 +272,7 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { hvac_mode: HVACmode };
     const command = dev.commandPair['on'];
-    const headers = lanHeaders || (await buildLanHeaders());
+    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : null;
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -292,7 +287,7 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { fan_mode: speed };
     const command = dev.commandPair['on'];
-    const headers = lanHeaders || (await buildLanHeaders());
+    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : null;
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -307,7 +302,7 @@ export default function SmartScreen({ navigation }) {
       ? { brightness_pct: Brightness }
       : { brightness: Brightness };
     const command = dev.commandPair['on'];
-    const headers = lanHeaders || (await buildLanHeaders());
+    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : null;
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -328,7 +323,7 @@ export default function SmartScreen({ navigation }) {
         <CallbackRegistration
           deviceCallbackUrl="http://192.168.2.115/api/v1.0/callback"
           callbackUrl="http://192.168.2.105:8080/"
-          lanHeaders={lanHeaders}                     // Pass lanHeaders directly
+          lanHeaders={lanHeaders}                     // Uses the prebuilt headers on LAN selection
           callbackId="c45e846ca23ab42c9ae469d988ae32a96"
           listenList={['device']}
           run={selectedOption === 'LAN' && !!lanHeaders && !callbackRegistered}

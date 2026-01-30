@@ -12,6 +12,7 @@ const stats = [
 ];
 
 const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
+  // Legacy: parent may have headers, but OnlineStatus now generates fresh ones per request.
   const lanAuthToken = lanHeaders?.Authorization ?? lanHeaders?.token ?? null;
   const navigation = useNavigation();
   return (
@@ -26,7 +27,6 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
         ))}
       </StatsContainer>
 
-      {/* Radio Button Section with Navigation and Online/Offline Status */}
       <RadioRow>
         <RadioContainer>
           <RadioOption onPress={() => setSelectedOption('LAN')}>
@@ -39,14 +39,12 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
             <RadioText>WAN</RadioText>
           </RadioOption>
         </RadioContainer>
-        {/* Navigate Button */}
-          <NavigateButton
-            onPress={() => navigation.navigate('DeviceStatuses', { selectedOption, lanAuthToken })}
-          >
-            <NavigateText>All Devices Status</NavigateText>
-          </NavigateButton>
-        {/* Online/Offline Status component */}
-        <OnlineStatus selectedOption={selectedOption} lanAuthToken={lanAuthToken} />
+        <NavigateButton
+          onPress={() => navigation.navigate('DeviceStatuses', { selectedOption, lanAuthToken })}
+        >
+          <NavigateText>All Devices Status</NavigateText>
+        </NavigateButton>
+        <OnlineStatus selectedOption={selectedOption} />
       </RadioRow>
     </>
   );
@@ -54,7 +52,7 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
 
 export default StatsSection;
 
-// Styled Components
+// Styled Components unchanged...
 const StatsContainer = styled.View`
   flex-direction: row;
   justify-content: space-around;
@@ -117,7 +115,6 @@ const RadioText = styled.Text`
   color: #333;
 `;
 
-// Navigation Button Styles
 const NavigateButton = styled(TouchableOpacity)`
   flex-direction: row;
   align-items: center;

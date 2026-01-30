@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text } from 'react-native';
 import styled from 'styled-components/native';
+import { buildLanHeaders } from './SmartScreenSections/auth';
 
 const StatusText = styled.Text`
   font-size: 16px;
@@ -10,18 +11,11 @@ const StatusText = styled.Text`
 `;
 
 /**
- * OnlineStatus (simplified to use only parent-provided token)
+ * OnlineStatus
  *
- * This version relies exclusively on the lanAuthToken prop for LAN requests.
- * It does NOT read from AsyncStorage or generate/refresh any tokens.
- *
- * Props:
- * - selectedOption: 'LAN' | 'WAN'
- * - pollingInterval: ms
- * - wanBackendUrl: backend proxy for WAN
- * - lanUrl: LAN device URL
- * - requestId, deviceId, residenceId
- * - lanAuthToken: token string provided by parent (required for LAN)
+ * Builds new LAN headers for every request using buildLanHeaders(),
+ * while WAN keeps using the backend proxy. This ignores lanAuthToken
+ * and derives headers fresh per poll.
  */
 export default function OnlineStatus({
   selectedOption = 'LAN',
@@ -31,7 +25,6 @@ export default function OnlineStatus({
   requestId = 'c45e846ca23ab42c9ae469d988ae32a96',
   deviceId = 'd4f54a92bea2a440c8a6a23d0b636dcf7',
   residenceId = 'r45844047053e43d78fe5272c5badbd3a',
-  lanAuthToken = null,
 }) {
   const [isOnline, setIsOnline] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -75,23 +68,50 @@ export default function OnlineStatus({
           return;
         }
 
-        // LAN path: require a token provided by parent
-        if (!lanAuthToken) {
-          console.warn('[OnlineStatus] LAN selected but no lanAuthToken provided by parent. Marking offline.');
+        // LAN path: build fresh headers for every request
+        console.log('[OnlineStatus] selectedOption: LAN -> building fresh headers and calling LAN URL', lanUrl);
+
+        let rawHeaders = {};
+        try {
+          rawHeaders = await buildLanHeaders();
+        } catch (e) {
+          console.warn('[OnlineStatus] buildLanHeaders failed, marking offline.', e);
           if (mounted) setIsOnline(false);
           return;
         }
 
-        console.log('[OnlineStatus] selectedOption: LAN -> calling LAN URL', lanUrl);
+        const possibleToken =
+          rawHeaders.Authorization ??
+          rawHeaders.token ??
+          rawHeaders.authToken ??
+          null;
+
+        const Authorization =
+          rawHeaders.Authorization && rawHeaders.Authorization.startsWith('Bearer ')
+            ? rawHeaders.Authorization
+            : possibleToken
+            ? possibleToken.startsWith('Bearer ')
+              ? possibleToken
+              : `Bearer ${possibleToken}`
+            : undefined;
 
         const headers = {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          // If token already includes 'Bearer ' take as-is, else prefix it
-          Authorization: lanAuthToken.startsWith('Bearer ') ? lanAuthToken : `Bearer ${lanAuthToken}`,
+          ...(Authorization ? { Authorization } : {}),
+          ...Object.fromEntries(
+            Object.entries(rawHeaders).filter(
+              ([k]) => !['Authorization', 'token', 'authToken'].includes(k)
+            )
+          ),
         };
 
-        // Set a fetch timeout for LAN
+        if (!headers.Authorization) {
+          console.warn('[OnlineStatus] No Authorization derived from buildLanHeaders; marking offline.');
+          if (mounted) setIsOnline(false);
+          return;
+        }
+
         const timeoutMs = 7000;
         const timeoutPromise = new Promise((_, reject) => {
           const id = setTimeout(() => {
@@ -159,7 +179,6 @@ export default function OnlineStatus({
     requestId,
     deviceId,
     residenceId,
-    lanAuthToken,
   ]);
 
   if (loading && isOnline === null) {
