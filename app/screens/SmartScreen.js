@@ -14,6 +14,7 @@ import styles from '../components/Smart/SmartScreenSections/SmartScreen.styles';
 import DeviceGrid from '../components/Smart/SmartScreenSections/DeviceGrid';
 import { buildLanHeaders } from '../components/Smart/SmartScreenSections/auth';
 import CallbackRegistration from '../components/Services/CallbackRegister';
+import { NetworkInfo } from 'react-native-network-info';
 
 const { Akuvox } = NativeModules;
 
@@ -37,6 +38,9 @@ async function requestPermissionsIfNeeded() {
   return true;
 }
 
+// IPv4 validation
+const ipv4Regex = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
+
 export default function SmartScreen({ navigation }) {
   const [selectedOption, setSelectedOption] = useState('LAN');
   const [deviceCategories, setDeviceCategories] = useState(INITIAL_DEVICE_CATEGORIES);
@@ -48,6 +52,9 @@ export default function SmartScreen({ navigation }) {
   const [lanHeaders, setLanHeaders] = useState(null);
   const [callbackRegistered, setCallbackRegistered] = useState(false);
 
+  // Local IPv4 state
+  const [localIpv4, setLocalIpv4] = useState(null);
+
   // SIP state
   const [sipInitialized, setSipInitialized] = useState(false);
   const [lastRegisteredTransport, setLastRegisteredTransport] = useState(null); // 'lan' | 'wan' | null
@@ -57,7 +64,7 @@ export default function SmartScreen({ navigation }) {
     console.log('[SmartScreen] callbackRegistered:', callbackRegistered);
   }, [selectedOption, lanHeaders, callbackRegistered]);
 
-  // Init SDK once when we land on SmartScreen
+  // Init SDK once when we land on SmartScreen and detect device IPv4
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -75,6 +82,16 @@ export default function SmartScreen({ navigation }) {
       } catch (e) {
         console.warn('[SmartScreen] initSdk error:', e);
         Alert.alert('SDK Error', e?.message || 'Failed to initialize SIP SDK.');
+      }
+
+      // Detect local IPv4 address
+      try {
+        const ipV4 = await NetworkInfo.getIPV4Address(); // returns IPv4 string
+        console.log('[SmartScreen] Local IPv4 detected:', ipV4);
+        if (mounted && ipV4 && ipv4Regex.test(ipV4)) setLocalIpv4(ipV4);
+        else console.warn('[SmartScreen] IPv4 not available or invalid:', ipV4);
+      } catch (e) {
+        console.warn('[SmartScreen] Unable to get IPv4 address:', e);
       }
     })();
     return () => {
@@ -306,6 +323,10 @@ export default function SmartScreen({ navigation }) {
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
+  // Build callback URL strictly with IPv4. Fallback to prior static IPv4 if detection fails.
+  const callbackHost = localIpv4 && ipv4Regex.test(localIpv4) ? localIpv4 : '192.168.2.105';
+  const callbackUrl = `http://${callbackHost}:8080/`;
+
   return (
     <Screen>
       <Animated.View style={[styles.headerContainer, { transform: [{ translateY: headerTranslateY }] }]}>
@@ -322,8 +343,8 @@ export default function SmartScreen({ navigation }) {
       {selectedOption === 'LAN' && !callbackRegistered && (
         <CallbackRegistration
           deviceCallbackUrl="http://192.168.2.115/api/v1.0/callback"
-          callbackUrl="http://192.168.2.105:8080/"
-          lanHeaders={lanHeaders}                     // Uses the prebuilt headers on LAN selection
+          callbackUrl={callbackUrl}                 // Use detected IPv4 instead of static
+          lanHeaders={lanHeaders}                   // Uses the prebuilt headers on LAN selection
           callbackId="c45e846ca23ab42c9ae469d988ae32a96"
           listenList={['device']}
           run={selectedOption === 'LAN' && !!lanHeaders && !callbackRegistered}
