@@ -2,7 +2,6 @@ package com.oneapp;
 
 import android.view.View;
 import android.view.SurfaceView;
-import android.view.TextureView;
 import android.widget.FrameLayout;
 import android.util.Log;
 import android.view.ViewGroup;
@@ -22,7 +21,7 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
     @Override
     protected FrameLayout createViewInstance(ThemedReactContext reactContext) {
         FrameLayout layout = new FrameLayout(reactContext);
-        layout.setBackgroundColor(0xFF222222); // Dark background
+        layout.setBackgroundColor(0xFF222222); // dark background
         return layout;
     }
 
@@ -33,7 +32,7 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
 
         if (monitorId > 0) {
             try {
-                View remoteView = SmartLockVideoCache.get(monitorId); // Must return a View (SurfaceView or TextureView)
+                View remoteView = SmartLockVideoCache.get(monitorId);
                 Log.d(REACT_CLASS, "Fetched remote video View for monitorId: " + monitorId + " = " + remoteView);
 
                 if (remoteView != null) {
@@ -41,6 +40,14 @@ public class SmartLockMonitorViewManager extends SimpleViewManager<FrameLayout> 
                     if (parent != null) {
                         parent.removeView(remoteView);
                     }
+                    if (remoteView instanceof SurfaceView) {
+                        SurfaceView sv = (SurfaceView) remoteView;
+                        sv.setZOrderMediaOverlay(true);
+                        sv.setZOrderOnTop(false);
+                        sv.setWillNotDraw(false);
+                    }
+                    remoteView.setVisibility(View.VISIBLE);
+
                     view.post(() -> {
                         view.addView(remoteView, new FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,

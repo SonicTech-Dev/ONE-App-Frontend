@@ -5,7 +5,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import android.view.View;
 import android.view.SurfaceView;
-import android.view.TextureView;
 
 import com.akuvox.mobile.libcommon.model.media.MediaManager;
 import com.akuvox.mobile.libcommon.params.SurfaceViewsParams;
@@ -27,6 +26,8 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AkuvoxModule extends ReactContextBaseJavaModule {
 
@@ -45,13 +46,17 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         return "Akuvox";
     }
 
-    // Required no-ops for NativeEventEmitter
-    @ReactMethod
-    public void addListener(String eventName) {}
-    @ReactMethod
-    public void removeListeners(Integer count) {}
+    // Required by NativeEventEmitter
+    @ReactMethod public void addListener(String eventName) {}
+    @ReactMethod public void removeListeners(Integer count) {}
 
-    // Emit to JS
+    // Use current Activity when available (per SL50 docs)
+    private android.content.Context activityOrApp() {
+        android.app.Activity a = getCurrentActivity();
+        return a != null ? a : reactContext;
+    }
+
+    // Emit events to JS
     private void emitToJS(String eventName, WritableMap params) {
         Log.d("AkuvoxModule", "Emitting event to JS: " + eventName + " | " + params.toString());
         reactContext
@@ -59,18 +64,29 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             .emit(eventName, params);
     }
 
-    // Robust extractor: finds any android.view.View (SurfaceView or TextureView) inside SurfaceViewsParams
+    // Prefer "remote" fields/methods, fallback to any View, with debug logging
     private View tryExtractRemoteVideoView(SurfaceViewsParams svp) {
         if (svp == null) return null;
 
-        // 1) Scan all fields
+        List<String> fieldLog = new ArrayList<>();
         try {
             Field[] fields = svp.getClass().getDeclaredFields();
+            // Pass 1: remote first
+            for (Field f : fields) {
+                f.setAccessible(true);
+                Object v = f.get(svp);
+                fieldLog.add(f.getName() + "=" + (v != null ? v.getClass().getName() : "null"));
+                if (v instanceof View && f.getName().toLowerCase().contains("remote")) {
+                    Log.d("AkuvoxModule", "Found remote video view via field '" + f.getName() + "': " + v);
+                    return (View) v;
+                }
+            }
+            // Pass 2: any View
             for (Field f : fields) {
                 f.setAccessible(true);
                 Object v = f.get(svp);
                 if (v instanceof View) {
-                    Log.d("AkuvoxModule", "Found remote video view via field '" + f.getName() + "': " + v);
+                    Log.d("AkuvoxModule", "Found video view via field '" + f.getName() + "': " + v);
                     return (View) v;
                 }
             }
@@ -78,15 +94,10 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             Log.w("AkuvoxModule", "Field scan error: " + t.getMessage());
         }
 
-        // 2) Try common getters
         String[] getterNames = new String[] {
-            "getRemoteView",
-            "getRemoteSurfaceView",
-            "getRemoteTextureView",
-            "remoteView",          // some AARs expose as method without 'get'
-            "remoteSurfaceView",
-            "remoteTextureView",
-            "getVideoView"
+            "getRemoteView", "getRemoteVideo", "getRemoteSurfaceView", "getRemoteTextureView",
+            "remoteView", "remoteVideo", "remoteSurfaceView", "remoteTextureView",
+            "getVideoView", "getMainView"
         };
         for (String name : getterNames) {
             try {
@@ -102,18 +113,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             }
         }
 
-        // 3) Debug dump to help identify structure
-        try {
-            StringBuilder sb = new StringBuilder("SurfaceViewsParams debug fields: ");
-            Field[] fields = svp.getClass().getDeclaredFields();
-            for (Field f : fields) {
-                f.setAccessible(true);
-                Object v = f.get(svp);
-                sb.append("\n - ").append(f.getName()).append(": ").append(v != null ? v.getClass().getName() : "null");
-            }
-            Log.w("AkuvoxModule", sb.toString());
-        } catch (Throwable ignore) {}
-
+        Log.w("AkuvoxModule", "SurfaceViewsParams fields: " + String.join(", ", fieldLog));
         Log.w("AkuvoxModule", "Could not extract remote video View from SurfaceViewsParams.");
         return null;
     }
@@ -134,7 +134,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     emitToJS("onRtspError", params);
                     return 0;
                 }
-
                 @Override
                 public int rtspMessageEstablishedMonitor(int monitorId, SurfaceViewsParams surfaceViewsParams) {
                     Log.d("AkuvoxModule", "rtspMessageEstablishedMonitor called! monitorId=" + monitorId);
@@ -155,7 +154,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     emitToJS("onMonitorEstablished", params);
                     return 0;
                 }
-
                 @Override
                 public int rtspMessageFinishedMonitor() {
                     Log.d("SIP", "RTSP finished");
@@ -164,18 +162,16 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     emitToJS("onMonitorFinished", params);
                     return 0;
                 }
-
                 @Override
                 public int sipMessageFinishedCall(int callId, String reason) {
                     Log.d("SIP", "Call finished: ID=" + callId + ", reason=" + reason);
-                    MediaManager.getInstance(reactContext).stopLocalVideo(callId);
+                    MediaManager.getInstance(activityOrApp()).stopLocalVideo(callId);
                     WritableMap params = Arguments.createMap();
                     params.putInt("callId", callId);
                     params.putString("reason", reason);
                     emitToJS("onCallFinished", params);
                     return 0;
                 }
-
                 @Override
                 public int sipMessageIncomingCall(CallDataBean callData) {
                     Log.d("SIP", "Incoming call: callId=" + callData.callId
@@ -189,29 +185,23 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     emitToJS("onIncomingCall", params);
                     return 0;
                 }
-
                 @Override
                 public int sipMessageEstablishedCall(CallDataBean callData) {
                     int callId = callData.callId;
-                    MediaManager.getInstance(reactContext).startLocalVideo(callId);
+                    MediaManager.getInstance(activityOrApp()).startLocalVideo(callId);
                     WritableMap params = Arguments.createMap();
                     params.putInt("callId", callId);
                     emitToJS("onCallEstablished", params);
                     Log.d("SIP", "Call established: " + callId);
                     return 0;
                 }
-
                 @Override
                 public int sipMessageRegStatus(int status) {
                     Log.d("SIP", "Registration status: " + status);
                     return 0;
                 }
-
                 @Override
-                public int rtspMessageAudioIntercom(int var1, int var2, MonitorDataWrap var3) {
-                    return 0;
-                }
-
+                public int rtspMessageAudioIntercom(int var1, int var2, MonitorDataWrap var3) { return 0; }
                 @Override
                 public int rtspMessageMonitorLoadSurfaceView(int monitorId, SurfaceViewsParams surfaceViewsParams) {
                     Log.d("AkuvoxModule", "rtspMessageMonitorLoadSurfaceView called! monitorId=" + monitorId);
@@ -230,16 +220,16 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 }
             }
         );
-        MediaManager.getInstance(reactContext).initMedia(reactContext);
+        // Per SDK docs: initMedia with Activity context
+        MediaManager.getInstance(activityOrApp()).initMedia(activityOrApp());
     }
 
     @ReactMethod
     public void registerSip(String ciphertext, String displayName, Promise promise) {
         try {
-            MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_TLS);
-            int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
-            MediaManager.getInstance(reactContext).setSipBackendOnline(true);
-
+            MediaManager.getInstance(activityOrApp()).setSipTransType(SipTransTypeEnum.TRANS_TYPE_TLS);
+            int result = MediaManager.getInstance(activityOrApp()).setSipAccount(ciphertext, displayName);
+            MediaManager.getInstance(activityOrApp()).setSipBackendOnline(true);
             if (result == 0) {
                 promise.resolve("SIP account registered successfully.");
                 Log.d("SIP", "App registered with account: " + displayName + " / " + ciphertext);
@@ -254,10 +244,9 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void registerSipLan(String ciphertext, String displayName, Promise promise) {
         try {
-            MediaManager.getInstance(reactContext).setSipTransType(SipTransTypeEnum.TRANS_TYPE_UDP);
-            int result = MediaManager.getInstance(reactContext).setSipAccount(ciphertext, displayName);
-            MediaManager.getInstance(reactContext).setSipBackendOnline(true);
-
+            MediaManager.getInstance(activityOrApp()).setSipTransType(SipTransTypeEnum.TRANS_TYPE_UDP);
+            int result = MediaManager.getInstance(activityOrApp()).setSipAccount(ciphertext, displayName);
+            MediaManager.getInstance(activityOrApp()).setSipBackendOnline(true);
             if (result == 0) {
                 promise.resolve("SIP account registered successfully.");
                 Log.d("SIP", "App registered with account: " + displayName + " / " + ciphertext);
@@ -272,7 +261,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void getSipStatus(Promise promise) {
         try {
-            int status = MediaManager.getInstance(reactContext).getLineStatus();
+            int status = MediaManager.getInstance(activityOrApp()).getLineStatus();
             promise.resolve(status);
         } catch (Exception e) {
             promise.reject("STATUS_ERROR", e.getMessage());
@@ -285,17 +274,17 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         makeCallBean.remoteUserName = remoteUserName;
         makeCallBean.remoteDisplayName = remoteDisplayName;
         makeCallBean.callVideoMode = callVideoMode;
-        MediaManager.getInstance(reactContext).makeCall(makeCallBean, reactContext);
+        MediaManager.getInstance(activityOrApp()).makeCall(makeCallBean, activityOrApp());
     }
 
     @ReactMethod
     public void hangupCall(int callId) {
-        MediaManager.getInstance(reactContext).hungupCall(callId);
+        MediaManager.getInstance(activityOrApp()).hungupCall(callId);
     }
 
     @ReactMethod
     public void answerCall(int callId) {
-        MediaManager.getInstance(reactContext).answerCall(callId, 1);
+        MediaManager.getInstance(activityOrApp()).answerCall(callId, 1);
     }
 
     // ---------------- SMART LOCK LAN MONITORING FLOW ---------------- //
@@ -320,20 +309,20 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 emitToJS("onSmartLockRtsp", params);
             }
         };
-        MediaManager.getInstance(reactContext).setRtspMessageListener(smartLockRtspListener);
+        MediaManager.getInstance(activityOrApp()).setRtspMessageListener(smartLockRtspListener);
     }
 
     @ReactMethod
     public void clearRtspMessageListener() {
         Log.d("SMARTLOCK", "clearRtspMessageListener called");
-        MediaManager.getInstance(reactContext).setRtspMessageListener(null);
+        MediaManager.getInstance(activityOrApp()).setRtspMessageListener(null);
         smartLockRtspListener = null;
     }
 
     @ReactMethod
     public void prepareVideoStart(String deviceId) {
         Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId);
-        int result = MediaManager.getInstance(reactContext).prepareVideoStart(deviceId);
+        int result = MediaManager.getInstance(activityOrApp()).prepareVideoStart(deviceId);
         Log.d("SMARTLOCK", "prepareVideoStart result: " + result);
     }
 
@@ -341,12 +330,12 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     public void startMonitorViaLAN(String rtspUrl, String deviceId, Promise promise) {
         try {
             Log.d("SMARTLOCK", "startMonitorViaLAN called: rtspUrl=" + rtspUrl + ", deviceId=" + deviceId);
-            int monitorId = MediaManager.getInstance(reactContext).startMonitorViaLAN(rtspUrl, deviceId);
+            int monitorId = MediaManager.getInstance(activityOrApp()).startMonitorViaLAN(rtspUrl, deviceId);
             Log.d("SMARTLOCK", "startMonitorViaLAN returned monitorId: " + monitorId);
             WritableMap params = Arguments.createMap();
             params.putInt("monitorId", monitorId);
             params.putString("rtspUrl", rtspUrl);
-            // Resolve only; onMonitorEstablished is emitted by rtspMessageEstablishedMonitor after cache is set
+            // Resolve only; onMonitorEstablished will be emitted by rtspMessageEstablishedMonitor
             promise.resolve(params);
         } catch (Exception e) {
             Log.e("SMARTLOCK", "startMonitorViaLAN exception: " + e.getMessage(), e);
@@ -357,21 +346,22 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void stopVideoViaLAN(String deviceId) {
         Log.d("SMARTLOCK", "stopVideoViaLAN called: " + deviceId);
-        MediaManager.getInstance(reactContext).stopVideoViaLAN(deviceId);
+        MediaManager.getInstance(activityOrApp()).stopVideoViaLAN(deviceId);
     }
 
     @ReactMethod
     public void finishMonitor(int monitorId) {
         Log.d("SMARTLOCK", "finishMonitor called: " + monitorId);
         SmartLockVideoCache.remove(monitorId);
-        MediaManager.getInstance(reactContext).finishMonitor(monitorId);
+        MediaManager.getInstance(activityOrApp()).finishMonitor(monitorId);
     }
 
+    // WAN monitor (unchanged)
     @ReactMethod
     public void startWanMonitor(String rtspUrl, String ciphertext, Promise promise) {
         try {
             Log.d("WAN_MONITOR", "startWanMonitor called: rtspUrl=" + rtspUrl + ", ciphertext=" + ciphertext);
-            int monitorId = MediaManager.getInstance(reactContext).startMonitor(rtspUrl, ciphertext);
+            int monitorId = MediaManager.getInstance(activityOrApp()).startMonitor(rtspUrl, ciphertext);
             Log.d("WAN_MONITOR", "startMonitor returned monitorId: " + monitorId);
             WritableMap params = Arguments.createMap();
             params.putInt("monitorId", monitorId);
@@ -387,13 +377,13 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void initLockConfig(String residenceId, String userId, String deviceId, String deviceIp) {
         Log.d("SMARTLOCK", "initLockConfig called: " + residenceId + ", " + userId + ", " + deviceId + ", " + deviceIp);
-        MediaManager.getInstance(reactContext).initLockConfig(residenceId, userId, deviceId, deviceIp);
+        MediaManager.getInstance(activityOrApp()).initLockConfig(residenceId, userId, deviceId, deviceIp);
     }
 
     @ReactMethod
     public void unlockViaLAN(String deviceId, final Callback callback) {
         Log.d("SMARTLOCK", "unlockViaLAN called: " + deviceId);
-        MediaManager.getInstance(reactContext).unlockViaLAN(deviceId, new IRequestListener<Boolean>() {
+        MediaManager.getInstance(activityOrApp()).unlockViaLAN(deviceId, new IRequestListener<Boolean>() {
             @Override
             public void onResult(Boolean success) {
                 Log.d("SMARTLOCK", "Unlock result: " + success);

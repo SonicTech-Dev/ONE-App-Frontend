@@ -4,7 +4,7 @@ import android.view.View;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Simple cache for monitorId -> View (SurfaceView or TextureView)
+ * Cache for monitorId -> View (SurfaceView or TextureView)
  */
 public class SmartLockVideoCache {
     private static final ConcurrentHashMap<Integer, View> remoteVideoMap = new ConcurrentHashMap<>();

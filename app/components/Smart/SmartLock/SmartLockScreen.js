@@ -1,9 +1,34 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Alert, StyleSheet, ScrollView, TouchableOpacity, Platform, NativeEventEmitter } from 'react-native';
-import { NativeModules, requireNativeComponent } from 'react-native';
+import {
+  View,
+  Text,
+  Alert,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  NativeModules,
+  NativeEventEmitter,
+  requireNativeComponent,
+  UIManager,
+  Platform,
+} from 'react-native';
 
 const { Akuvox } = NativeModules;
-const SmartLockMonitorView = requireNativeComponent('SmartLockMonitorView');
+
+const VIEW_NAME = 'SmartLockMonitorView';
+const isNativeViewRegistered =
+  (UIManager.getViewManagerConfig
+    ? UIManager.getViewManagerConfig(VIEW_NAME)
+    : UIManager[VIEW_NAME]) != null;
+
+// Fallback throws a helpful error if the native view isn’t registered
+const SmartLockMonitorView = isNativeViewRegistered
+  ? requireNativeComponent(VIEW_NAME)
+  : () => {
+      throw new Error(
+        `${VIEW_NAME} is not registered. Rebuild the app after adding SmartLockMonitorViewManager and ensure the package is linked.`
+      );
+    };
 
 function checkMethod(name) {
   if (!Akuvox || typeof Akuvox[name] !== 'function') {
@@ -18,13 +43,11 @@ export default function SmartLockScreen() {
   const deviceId = 'db8cbfe10650e484d800b2a0a7b07fd78';
   const deviceIp = '192.168.2.100';
 
-  // UI/logic state
+  // UI state
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [monitorId, setMonitorId] = useState(null);
-  const [monitorType, setMonitorType] = useState('lan'); // SDK view (LAN)
   const [unlockStatus, setUnlockStatus] = useState(null);
   const [videoError, setVideoError] = useState('');
-  const [lastEvent, setLastEvent] = useState('');
   const [loading, setLoading] = useState(false);
 
   const safePromiseCall = useCallback(async (fn, args = [], alertMsg = '', onError = () => {}) => {
@@ -69,17 +92,13 @@ export default function SmartLockScreen() {
   useEffect(() => {
     handleInitLockConfig();
 
-    // IMPORTANT: Avoid passing the module unless it implements addListener/removeListeners
-    const eventEmitter =
-      Platform.OS === 'ios' ? new NativeEventEmitter(Akuvox) : new NativeEventEmitter();
+    const eventEmitter = new NativeEventEmitter(Akuvox);
 
-    // 1) Register RTSP listener and 2) kick off handshake
+    // Register RTSP listener and kick off monitor handshake
     safeCall('setRtspMessageListener', [deviceId, userId], 'Failed to set RTSP listener');
     safeCall('prepareVideoStart', [deviceId], 'Failed to prepare video start');
 
     const lanSub = eventEmitter.addListener('onSmartLockRtsp', async (event) => {
-      console.log('onSmartLockRtsp:', event);
-      setLastEvent('onSmartLockRtsp: ' + JSON.stringify(event, null, 2));
       if (event?.status === 'rtspReady' && event.rtspUrl) {
         setLoading(true);
         const res = await safePromiseCall(
@@ -91,35 +110,27 @@ export default function SmartLockScreen() {
         if (!res || !res.monitorId || res.monitorId <= 0) {
           setVideoError('Failed to start LAN monitor');
         }
-        // NOTE: Don't set monitorId here; wait for onMonitorEstablished with surfaceViewsParams
       }
       if (event?.status === 'rtspStop') {
         setIsMonitoring(false);
         setMonitorId(null);
-        setMonitorType(null);
         setLoading(false);
       }
     });
 
     const establishedSub = eventEmitter.addListener('onMonitorEstablished', (event) => {
-      console.log('onMonitorEstablished:', event);
-      setLastEvent('onMonitorEstablished: ' + JSON.stringify(event, null, 2));
-      // Avoid premature set caused by native startMonitorViaLAN emission (which lacks SurfaceView cache)
-      if (event?.monitorId > 0 && event?.surfaceViewsParams) {
-        setMonitorId(event.monitorId);
+      if (event?.monitorId > 0) {
         setIsMonitoring(true);
-        setMonitorType((prev) => prev || 'lan');
-        setLoading(false);
         setVideoError('');
+        setMonitorId(event.monitorId);
       }
     });
 
     const surfaceViewSub = eventEmitter.addListener('onMonitorLoadSurfaceView', (event) => {
-      console.log('onMonitorLoadSurfaceView:', event);
-      setLastEvent('onMonitorLoadSurfaceView: ' + JSON.stringify(event, null, 2));
-      // If you want to force re-render, you could re-set monitorId here
       if (event?.monitorId > 0) {
-        setMonitorId((prev) => prev); // no-op, but keeps state fresh
+        // Force re-attachment of the native view
+        setMonitorId(-1);
+        setTimeout(() => setMonitorId(event.monitorId), 0);
       }
     });
 
@@ -128,20 +139,27 @@ export default function SmartLockScreen() {
     });
 
     return () => {
-      lanSub.remove();
-      establishedSub.remove();
-      surfaceViewSub.remove();
-      rtspErrorSub.remove();
+      try {
+        lanSub.remove();
+        establishedSub.remove();
+        surfaceViewSub.remove();
+        rtspErrorSub.remove();
+      } catch {}
+      if (monitorId && monitorId > 0) {
+        safeCall('finishMonitor', [monitorId]);
+      }
+      safeCall('stopVideoViaLAN', [deviceId]);
+      safeCall('clearRtspMessageListener', []);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const renderVideoArea = () => {
-    if (isMonitoring && monitorType === 'lan' && monitorId && monitorId > 0) {
+    if (isMonitoring && monitorId && monitorId > 0) {
       return (
         <View style={styles.videoContainer}>
           <SmartLockMonitorView style={styles.nativeVideo} monitorId={monitorId} />
-          <Text style={styles.monitorType}>Type: LAN Monitoring (SDK)</Text>
+          <Text style={styles.monitorType}>LAN Monitoring (SDK)</Text>
           {videoError ? <Text style={styles.videoError}>{videoError}</Text> : null}
         </View>
       );
@@ -188,10 +206,17 @@ const styles = StyleSheet.create({
   unlockButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18, letterSpacing: 1 },
   status: { fontSize: 18, color: '#38a169', marginTop: 12, fontWeight: '600', letterSpacing: 0.5 },
   videoContainer: {
-    width: '98%', maxWidth: 420, aspectRatio: 1.6, borderRadius: 16, overflow: 'hidden', backgroundColor: '#222',
-    marginTop: 4, marginBottom: 24, alignItems: 'center', justifyContent: 'center', elevation: 5,
+    width: '98%', maxWidth: 420, aspectRatio: 1.6,
+    // borderRadius: 16,
+    // overflow: 'hidden',
+    backgroundColor: '#222',
+    marginTop: 4,
+    marginBottom: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
   },
-  nativeVideo: { flex: 1, width: '100%', minHeight: 220, backgroundColor: '#111', borderRadius: 16 },
+  nativeVideo: { flex: 1, width: '100%', minHeight: 220, backgroundColor: '#111' },
   monitorType: { color: '#fff', fontWeight: 'bold', marginTop: 12, fontSize: 16, letterSpacing: 1 },
   videoError: { color: '#c53030', fontWeight: 'bold', marginTop: 12, fontSize: 16, letterSpacing: 1, textAlign: 'center' },
 });
