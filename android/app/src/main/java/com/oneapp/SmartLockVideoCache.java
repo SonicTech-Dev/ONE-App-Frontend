@@ -1,23 +1,27 @@
 package com.oneapp;
 
-import android.view.SurfaceView;
-import java.util.HashMap;
-import java.util.Map;
+import android.view.View;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Simple cache for monitorId -> SurfaceView
+ * Simple cache for monitorId -> View (SurfaceView or TextureView)
  */
 public class SmartLockVideoCache {
-    private static final Map<Integer, SurfaceView> remoteVideoMap = new HashMap<>();
-    public static void put(int monitorId, SurfaceView surfaceView) {
-        remoteVideoMap.put(monitorId, surfaceView);
-        android.util.Log.d("SmartLockVideoCache", "put: monitorId=" + monitorId + ", surfaceView=" + surfaceView);
+    private static final ConcurrentHashMap<Integer, View> remoteVideoMap = new ConcurrentHashMap<>();
+
+    public static void put(int monitorId, View view) {
+        remoteVideoMap.put(monitorId, view);
+        android.util.Log.d("SmartLockVideoCache", "put: monitorId=" + monitorId +
+                ", view=" + view + ", type=" + (view != null ? view.getClass().getSimpleName() : "null"));
     }
-    public static SurfaceView get(int monitorId) {
-        SurfaceView view = remoteVideoMap.get(monitorId);
-        android.util.Log.d("SmartLockVideoCache", "get: monitorId=" + monitorId + ", surfaceView=" + view);
+
+    public static View get(int monitorId) {
+        View view = remoteVideoMap.get(monitorId);
+        android.util.Log.d("SmartLockVideoCache", "get: monitorId=" + monitorId +
+                ", view=" + view + ", type=" + (view != null ? view.getClass().getSimpleName() : "null"));
         return view;
     }
+
     public static void remove(int monitorId) {
         remoteVideoMap.remove(monitorId);
         android.util.Log.d("SmartLockVideoCache", "remove: monitorId=" + monitorId);

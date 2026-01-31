@@ -3,7 +3,9 @@ package com.oneapp;
 import android.app.Application;
 import android.util.Log;
 import androidx.annotation.NonNull;
+import android.view.View;
 import android.view.SurfaceView;
+import android.view.TextureView;
 
 import com.akuvox.mobile.libcommon.model.media.MediaManager;
 import com.akuvox.mobile.libcommon.params.SurfaceViewsParams;
@@ -23,6 +25,9 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
 public class AkuvoxModule extends ReactContextBaseJavaModule {
 
     private final ReactApplicationContext reactContext;
@@ -40,7 +45,13 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         return "Akuvox";
     }
 
-    // Utility to emit events to JS
+    // Required no-ops for NativeEventEmitter
+    @ReactMethod
+    public void addListener(String eventName) {}
+    @ReactMethod
+    public void removeListeners(Integer count) {}
+
+    // Emit to JS
     private void emitToJS(String eventName, WritableMap params) {
         Log.d("AkuvoxModule", "Emitting event to JS: " + eventName + " | " + params.toString());
         reactContext
@@ -48,28 +59,62 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             .emit(eventName, params);
     }
 
-    // Try to extract the remote RTSP SurfaceView from SurfaceViewsParams,
-    // defensively supporting both field and method access depending on the AAR.
-    private SurfaceView tryExtractRemoteView(SurfaceViewsParams svp) {
+    // Robust extractor: finds any android.view.View (SurfaceView or TextureView) inside SurfaceViewsParams
+    private View tryExtractRemoteVideoView(SurfaceViewsParams svp) {
         if (svp == null) return null;
+
+        // 1) Scan all fields
         try {
-            // Common pattern: direct field
-            java.lang.reflect.Field f = svp.getClass().getDeclaredField("remoteView");
-            f.setAccessible(true);
-            Object v = f.get(svp);
-            if (v instanceof SurfaceView) {
-                return (SurfaceView) v;
+            Field[] fields = svp.getClass().getDeclaredFields();
+            for (Field f : fields) {
+                f.setAccessible(true);
+                Object v = f.get(svp);
+                if (v instanceof View) {
+                    Log.d("AkuvoxModule", "Found remote video view via field '" + f.getName() + "': " + v);
+                    return (View) v;
+                }
             }
-        } catch (Throwable ignore) {}
+        } catch (Throwable t) {
+            Log.w("AkuvoxModule", "Field scan error: " + t.getMessage());
+        }
+
+        // 2) Try common getters
+        String[] getterNames = new String[] {
+            "getRemoteView",
+            "getRemoteSurfaceView",
+            "getRemoteTextureView",
+            "remoteView",          // some AARs expose as method without 'get'
+            "remoteSurfaceView",
+            "remoteTextureView",
+            "getVideoView"
+        };
+        for (String name : getterNames) {
+            try {
+                Method m = svp.getClass().getMethod(name);
+                Object v = m.invoke(svp);
+                if (v instanceof View) {
+                    Log.d("AkuvoxModule", "Found remote video view via method '" + name + "': " + v);
+                    return (View) v;
+                }
+            } catch (NoSuchMethodException ignored) {
+            } catch (Throwable t) {
+                Log.w("AkuvoxModule", "Getter '" + name + "' error: " + t.getMessage());
+            }
+        }
+
+        // 3) Debug dump to help identify structure
         try {
-            // Alternate: getter method
-            java.lang.reflect.Method m = svp.getClass().getMethod("getRemoteView");
-            Object v = m.invoke(svp);
-            if (v instanceof SurfaceView) {
-                return (SurfaceView) v;
+            StringBuilder sb = new StringBuilder("SurfaceViewsParams debug fields: ");
+            Field[] fields = svp.getClass().getDeclaredFields();
+            for (Field f : fields) {
+                f.setAccessible(true);
+                Object v = f.get(svp);
+                sb.append("\n - ").append(f.getName()).append(": ").append(v != null ? v.getClass().getName() : "null");
             }
+            Log.w("AkuvoxModule", sb.toString());
         } catch (Throwable ignore) {}
-        Log.w("AkuvoxModule", "Could not extract remote SurfaceView from SurfaceViewsParams.");
+
+        Log.w("AkuvoxModule", "Could not extract remote video View from SurfaceViewsParams.");
         return null;
     }
 
@@ -89,13 +134,13 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     emitToJS("onRtspError", params);
                     return 0;
                 }
+
                 @Override
                 public int rtspMessageEstablishedMonitor(int monitorId, SurfaceViewsParams surfaceViewsParams) {
                     Log.d("AkuvoxModule", "rtspMessageEstablishedMonitor called! monitorId=" + monitorId);
 
-                    // For RTSP monitor flows, cache the remote SurfaceView from SurfaceViewsParams
-                    SurfaceView remoteView = tryExtractRemoteView(surfaceViewsParams);
-                    Log.d("AkuvoxModule", "Extracted remote SurfaceView for monitorId=" + monitorId + " = " + remoteView);
+                    View remoteView = tryExtractRemoteVideoView(surfaceViewsParams);
+                    Log.d("AkuvoxModule", "Extracted remote video View for monitorId=" + monitorId + " = " + remoteView);
 
                     if (remoteView != null) {
                         SmartLockVideoCache.put(monitorId, remoteView);
@@ -106,10 +151,8 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
 
                     WritableMap params = Arguments.createMap();
                     params.putInt("monitorId", monitorId);
-                    params.putString("surfaceViewsParams",
-                        surfaceViewsParams != null ? surfaceViewsParams.toString() : "null");
+                    params.putString("surfaceViewsParams", surfaceViewsParams != null ? surfaceViewsParams.toString() : "null");
                     emitToJS("onMonitorEstablished", params);
-
                     return 0;
                 }
 
@@ -173,8 +216,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 public int rtspMessageMonitorLoadSurfaceView(int monitorId, SurfaceViewsParams surfaceViewsParams) {
                     Log.d("AkuvoxModule", "rtspMessageMonitorLoadSurfaceView called! monitorId=" + monitorId);
 
-                    // Refresh cached remote view if SDK updates it
-                    SurfaceView remoteView = tryExtractRemoteView(surfaceViewsParams);
+                    View remoteView = tryExtractRemoteVideoView(surfaceViewsParams);
                     if (remoteView != null) {
                         SmartLockVideoCache.put(monitorId, remoteView);
                         Log.d("AkuvoxModule", "Remote video view refreshed for monitorId=" + monitorId);
@@ -201,7 +243,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             if (result == 0) {
                 promise.resolve("SIP account registered successfully.");
                 Log.d("SIP", "App registered with account: " + displayName + " / " + ciphertext);
-
             } else {
                 promise.reject("REGISTER_ERROR", "setSipAccount returned error code: " + result);
             }
@@ -220,7 +261,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             if (result == 0) {
                 promise.resolve("SIP account registered successfully.");
                 Log.d("SIP", "App registered with account: " + displayName + " / " + ciphertext);
-
             } else {
                 promise.reject("REGISTER_ERROR", "setSipAccount returned error code: " + result);
             }
@@ -290,7 +330,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         smartLockRtspListener = null;
     }
 
-    // Per SDK: prepareVideoStart immediately after setting listener, only needs deviceId
     @ReactMethod
     public void prepareVideoStart(String deviceId) {
         Log.d("SMARTLOCK", "prepareVideoStart called: " + deviceId);
@@ -298,7 +337,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         Log.d("SMARTLOCK", "prepareVideoStart result: " + result);
     }
 
-    // Per SDK: after receiving RTSP URL, start monitor using startMonitorViaLAN
     @ReactMethod
     public void startMonitorViaLAN(String rtspUrl, String deviceId, Promise promise) {
         try {
@@ -308,8 +346,8 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
             WritableMap params = Arguments.createMap();
             params.putInt("monitorId", monitorId);
             params.putString("rtspUrl", rtspUrl);
+            // Resolve only; onMonitorEstablished is emitted by rtspMessageEstablishedMonitor after cache is set
             promise.resolve(params);
-            emitToJS("onMonitorEstablished", params);
         } catch (Exception e) {
             Log.e("SMARTLOCK", "startMonitorViaLAN exception: " + e.getMessage(), e);
             promise.reject("MONITOR_ERROR", e.getMessage());
@@ -329,7 +367,6 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         MediaManager.getInstance(reactContext).finishMonitor(monitorId);
     }
 
-    // WAN monitor (unchanged, except JS emission happens in rtsp callbacks)
     @ReactMethod
     public void startWanMonitor(String rtspUrl, String ciphertext, Promise promise) {
         try {

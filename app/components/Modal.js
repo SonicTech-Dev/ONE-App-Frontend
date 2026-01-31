@@ -1,5 +1,4 @@
 import React from 'react';
-import SL50LockModal from './Smart/SmartLock/Sl50';
 import CurtainModal from './Smart/Curtain/CurtainOptions'; // Ensure this exists
 import GenericDeviceModal from './Smart/Sensors/Sensors1'; // Fallback
 import ACModal from './Smart/AC/AC'; // Ensure this exists
@@ -40,22 +39,6 @@ export default function DeviceModals({
 
   if (!selectedDevice) return null;
   const { title, isOn } = selectedDevice;
-  if (
-    title.includes("SL50 Smart Lock")
-    ) {
-    return (
-      <SL50LockModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        device={selectedDevice}
-        isLocked={isOn}
-        onToggleLock={() => {
-          handleToggle(selectedDevice, isOn ? 'off' : 'on');
-        }}
-        deviceStatus={deviceStatus}
-      />
-    );
-  }
    if (
     title.includes("C6 Lock")
     ) {
