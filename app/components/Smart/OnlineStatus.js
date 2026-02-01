@@ -20,7 +20,7 @@ const StatusText = styled.Text`
 export default function OnlineStatus({
   selectedOption = 'LAN',
   pollingInterval = 30000,
-  wanBackendUrl = 'http://3.227.99.254:8010/online_status/',
+  wanBackendUrl = 'https://one-development.soniciot.com/online_status/',
   lanUrl = 'http://192.168.2.115/api/v1.0/device',
   requestId = 'c45e846ca23ab42c9ae469d988ae32a96',
   deviceId = 'd4f54a92bea2a440c8a6a23d0b636dcf7',

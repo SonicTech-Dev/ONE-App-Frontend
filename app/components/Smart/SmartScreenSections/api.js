@@ -41,7 +41,7 @@ export const controlDevice = async (
       Alert.alert('Error', 'Failed to control device locally.');
     }
   } else {
-    const apiUrl = 'http://3.227.99.254:8010/control_devices/';
+    const apiUrl = 'https://one-development.soniciot.com/control_devices/';
     const body = {
       command: 'batch_control_device',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
@@ -114,7 +114,7 @@ export const deviceStatus = async (
       Alert.alert('Error', 'Failed to retrieve device status locally.');
     }
   } else {
-    const apiUrl = 'http://3.227.99.254:8010/device_status/';
+    const apiUrl = 'https://one-development.soniciot.com/device_status/';
     const body = {
       command: 'get_device_info',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',

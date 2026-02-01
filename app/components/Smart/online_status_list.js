@@ -5,18 +5,31 @@ import { buildLanHeaders } from './SmartScreenSections/auth';
  * DeviceListOnlineStatus
  *
  * Fetches all device statuses in one call (LAN or WAN based on selectedOption),
- * builds a map of { [device_id]: boolean } and returns it via onStatuses.
- * Polls at the provided interval.
+ * and returns a map: { [device_id]: boolean } via onStatuses.
+ *
+ * LAN body:
+ * {
+ *   "command": "get_device_list",
+ *   "id": "<requestId>",
+ *   "param": {}
+ * }
+ *
+ * WAN body:
+ * {
+ *   "command": "get_device_list",
+ *   "id": "<requestId>",
+ *   "param": { "residence_id": "<residenceId>" }
+ * }
  */
 export default function DeviceListOnlineStatus({
   selectedOption = 'LAN',
   pollingInterval = 30000,
 
-  // Endpoints (override as needed)
-  wanBackendUrl = 'http://3.227.99.254:8010/device_status/',
+  // Endpoints
+  wanBackendUrl = 'https://one-development.soniciot.com/device_status/',
   lanUrl = 'http://192.168.2.115/api/v1.0/device',
 
-  // Payload values (override as needed)
+  // Payload values
   requestId = 'c45e846ca23ab42c9ae469d988ae32a96',
   residenceId = 'r45844047053e43d78fe5272c5badbd3a',
 
@@ -33,7 +46,6 @@ export default function DeviceListOnlineStatus({
     async function fetchAllStatuses() {
       if (!mounted) return;
       onLoadingChange(true);
-      console.log('[DeviceListOnlineStatus] Fetching all statuses via', selectedOption);
 
       const lanBody = {
         command: 'get_device_list',
@@ -48,16 +60,18 @@ export default function DeviceListOnlineStatus({
 
       try {
         if (selectedOption === 'WAN') {
-          // WAN path: call backend proxy
           const res = await fetch(wanBackendUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
             body: JSON.stringify(wanBody),
             signal: controller.signal,
           });
 
           if (!res.ok) {
-            console.warn('[DeviceListOnlineStatus] WAN backend non-2xx', {
+            console.warn('[DeviceListOnlineStatus] WAN non-2xx', {
               status: res.status,
               url: wanBackendUrl,
             });
@@ -71,12 +85,12 @@ export default function DeviceListOnlineStatus({
           return;
         }
 
-        // LAN path: build fresh headers for every request
+        // LAN path
         let rawHeaders = {};
         try {
           rawHeaders = await buildLanHeaders();
         } catch (e) {
-          console.warn('[DeviceListOnlineStatus] buildLanHeaders failed; returning empty map.', e);
+          console.warn('[DeviceListOnlineStatus] buildLanHeaders failed.', e);
           if (mounted) onStatuses({});
           return;
         }
@@ -108,12 +122,11 @@ export default function DeviceListOnlineStatus({
         };
 
         if (!headers.Authorization) {
-          console.warn('[DeviceListOnlineStatus] No Authorization derived from buildLanHeaders; returning empty map.');
+          console.warn('[DeviceListOnlineStatus] No Authorization; LAN offline map.');
           if (mounted) onStatuses({});
           return;
         }
 
-        // Timeout helper
         const timeoutMs = 7000;
         const timeoutPromise = new Promise((_, reject) => {
           const id = setTimeout(() => {
@@ -153,7 +166,7 @@ export default function DeviceListOnlineStatus({
         if (err.name === 'AbortError') {
           console.log('[DeviceListOnlineStatus] fetch aborted');
         } else if (err.message === 'timeout') {
-          console.warn('[DeviceListOnlineStatus] LAN fetch timeout (device unreachable?)', { url: lanUrl });
+          console.warn('[DeviceListOnlineStatus] LAN timeout', { url: lanUrl });
         } else {
           console.warn('[DeviceListOnlineStatus] fetch error', err);
         }
@@ -174,30 +187,36 @@ export default function DeviceListOnlineStatus({
       controller.abort();
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-    // IMPORTANT: Do NOT include the callback props in deps, they change per render
   }, [selectedOption, pollingInterval, wanBackendUrl, lanUrl, requestId, residenceId]);
 
-  // This component doesn't render UI; it only fetches and lifts state via callbacks.
   return null;
 }
 
 /**
- * Build a status map for WAN payload (device_status_summary.js shape).
- * Expects: { success, result: [ { device_id, online, ... }, ... ] }
+ * WAN summary: { result: [ { device_id, online, ... }, ... ] }
  */
 function buildWanStatusMap(json) {
   const map = {};
   if (!json || !Array.isArray(json.result)) return map;
-  for (const item of json.result) {
-    if (!item || !item.device_id) continue;
-    map[item.device_id] = !!item.online;
+
+  for (const device of json.result) {
+    if (!device) continue;
+    if (device.device_id) {
+      map[device.device_id] = !!device.online;
+    }
+    if (Array.isArray(device.sub_devices)) {
+      for (const sub of device.sub_devices) {
+        if (!sub || !sub.device_id) continue;
+        map[sub.device_id] = !!sub.online;
+      }
+    }
   }
   return map;
 }
 
 /**
- * Build a status map for LAN payload (device_status_report.js shape).
- * Expects: { success, result: [ { device_id, online, sub_devices: [ { device_id, online }, ... ] }, ... ] }
+ * LAN report: { result: [ { device_id, online, sub_devices: [...] }, ... ] }
+ * Include panels and sub_devices by device_id only.
  */
 function buildLanStatusMap(json) {
   const map = {};
@@ -215,5 +234,6 @@ function buildLanStatusMap(json) {
       }
     }
   }
+
   return map;
 }
