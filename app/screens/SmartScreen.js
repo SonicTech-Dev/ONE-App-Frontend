@@ -60,7 +60,7 @@ export default function SmartScreen({ navigation }) {
   const [lastRegisteredTransport, setLastRegisteredTransport] = useState(null); // 'lan' | 'wan' | null
 
   useEffect(() => {
-    console.log('[SmartScreen] selectedOption:', selectedOption);
+    console.log('[SmartScreen] selectedOtion:', selectedOption);
     console.log('[SmartScreen] callbackRegistered:', callbackRegistered);
   }, [selectedOption, lanHeaders, callbackRegistered]);
 
@@ -99,26 +99,6 @@ export default function SmartScreen({ navigation }) {
     };
   }, []);
 
-  // Keep the old behavior: build LAN headers when LAN is selected
-  useEffect(() => {
-    if (selectedOption === 'LAN') {
-      if (!lanHeaders) {
-        async function fetchHeaders() {
-          try {
-            const headers = await buildLanHeaders();
-            console.log('[SmartScreen] LAN headers fetched:', headers);
-            setLanHeaders(headers);
-          } catch (e) {
-            Alert.alert('Token Error', 'Failed to fetch access token.');
-          }
-        }
-        fetchHeaders();
-      }
-    } else {
-      setLanHeaders(null);
-      setCallbackRegistered(false); // reset registration if leaving LAN
-    }
-  }, [selectedOption, lanHeaders]);
 
   // Auto register SIP whenever selectedOption changes (LAN/WAN),
   // after SDK init

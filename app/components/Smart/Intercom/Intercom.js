@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import RTSPViewer from './RTSPViewer';
+import { buildLanHeaders } from '../SmartScreenSections/auth';
 
 const FALLBACK_LAN_RTSP_URL = 'rtsp://admin:Sonic123@192.168.2.114:';
 const FALLBACK_WAN_RTSP_URL = 'rtsp://user:J19IE753w25867v6@35.156.199.213:554/0C11052C6E92';
@@ -28,8 +29,28 @@ export default function Intercom({ route }) {
   const lanRtspUrl = params.lanRtspUrl || FALLBACK_LAN_RTSP_URL;
   const wanRtspUrl = params.wanRtspUrl || FALLBACK_WAN_RTSP_URL;
 
-  // Receive LAN headers via props
-  const LAN_HEADERS = params.LAN_HEADERS || null;
+  // Build LAN headers inside the component (not via props)
+  const [lanHeaders, setLanHeaders] = useState(null);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const headers = await buildLanHeaders(); // works whether buildLanHeaders is sync or async
+        if (mounted) {
+          setLanHeaders(headers);
+          console.log('[Intercom] Built LAN_HEADERS:', headers);
+        }
+      } catch (err) {
+        console.error('[Intercom] Failed to build LAN_HEADERS:', err);
+        if (mounted) {
+          setLanHeaders(null);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Pick the correct RTSP feed based on selectedOption
   const uri = useMemo(
@@ -40,8 +61,8 @@ export default function Intercom({ route }) {
   const onPressUnlockDoor = async () => {
     try {
       if (isLAN) {
-        if (!LAN_HEADERS || typeof LAN_HEADERS !== 'object') {
-          Alert.alert('Missing headers', 'LAN_HEADERS were not provided.');
+        if (!lanHeaders || typeof lanHeaders !== 'object') {
+          Alert.alert('Missing headers', 'LAN headers are not ready yet.');
           return;
         }
         const lanApiUrl = `http://192.168.2.115/api/v1.0/device`;
@@ -60,7 +81,7 @@ export default function Intercom({ route }) {
 
         const resp = await fetch(lanApiUrl, {
           method: 'POST',
-          headers: LAN_HEADERS,
+          headers: lanHeaders,
           body: JSON.stringify(body),
         });
 
