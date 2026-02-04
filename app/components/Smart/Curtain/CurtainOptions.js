@@ -1,6 +1,153 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
-import Slider from '@react-native-community/slider';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Animated,
+  PanResponder,
+} from 'react-native';
+
+/**
+ * DraggableSlider
+ *
+ * A lightweight custom horizontal slider using Animated + PanResponder.
+ * - No external dependencies required.
+ * - Smoothly follows the finger, doesn't fight external updates while dragging.
+ * - Calls onComplete only when the user releases the thumb.
+ *
+ * Props:
+ * - value: number (0-100) current position
+ * - onChange?: (val: number) => void  called while dragging (optional)
+ * - onComplete?: (val: number) => void called on release
+ * - disabled?: boolean
+ */
+function DraggableSlider({ value = 0, onChange, onComplete, disabled = false }) {
+  const trackWidthRef = useRef(0);
+  const draggingRef = useRef(false);
+  const initialThumbXRef = useRef(0);
+
+  // thumbX stores pixel position (0..trackWidth)
+  const thumbX = useRef(new Animated.Value(0)).current;
+  const [measured, setMeasured] = useState(false);
+  const [localPercent, setLocalPercent] = useState(Math.round(value));
+
+  // When external value changes and we're not dragging, update the thumb smoothly
+  useEffect(() => {
+    if (draggingRef.current) return;
+    const w = trackWidthRef.current || 0;
+    const targetX = Math.round((Math.max(0, Math.min(100, value)) / 100) * w);
+    Animated.spring(thumbX, {
+      toValue: targetX,
+      useNativeDriver: false,
+      speed: 20,
+      bounciness: 0,
+    }).start();
+    setLocalPercent(Math.round(value));
+  }, [value, thumbX]);
+
+  // When layout measured, position thumb to current value
+  const onTrackLayout = (e) => {
+    const w = e.nativeEvent.layout.width;
+    trackWidthRef.current = w;
+    const initialX = Math.round((Math.max(0, Math.min(100, value)) / 100) * w);
+    thumbX.setValue(initialX);
+    setMeasured(true);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !disabled,
+      onMoveShouldSetPanResponder: () => !disabled,
+      onPanResponderGrant: () => {
+        draggingRef.current = true;
+        // capture current thumb pos
+        thumbX.stopAnimation((current) => {
+          initialThumbXRef.current = current || 0;
+        });
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        const w = trackWidthRef.current || 1;
+        let newX = initialThumbXRef.current + gestureState.dx;
+        if (newX < 0) newX = 0;
+        if (newX > w) newX = w;
+        // update animated value and percent
+        thumbX.setValue(newX);
+        const percent = Math.round((newX / w) * 100);
+        setLocalPercent(percent);
+        onChange && onChange(percent);
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        draggingRef.current = false;
+        const w = trackWidthRef.current || 1;
+        let newX = initialThumbXRef.current + gestureState.dx;
+        if (newX < 0) newX = 0;
+        if (newX > w) newX = w;
+        const percent = Math.round((newX / w) * 100);
+        setLocalPercent(percent);
+        onComplete && onComplete(percent);
+      },
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderTerminate: () => {
+        // Treat as release
+        draggingRef.current = false;
+        thumbX.stopAnimation((current) => {
+          const w = trackWidthRef.current || 1;
+          const percent = Math.round(((current || 0) / w) * 100);
+          setLocalPercent(percent);
+          onComplete && onComplete(percent);
+        });
+      },
+    })
+  ).current;
+
+  // derived widths/styles
+  const filledWidth = thumbX.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  }); // We'll calculate style with interpolate later once track width known
+
+  // Thumb translation style
+  const thumbTranslateStyle = {
+    transform: [
+      {
+        translateX: thumbX,
+      },
+    ],
+  };
+
+  return (
+    <View style={sliderStyles.container}>
+      <Text style={sliderStyles.sliderLabel}>Set Position:</Text>
+      <View
+        style={sliderStyles.trackContainer}
+        onLayout={onTrackLayout}
+        {...(measured ? panResponder.panHandlers : {})}
+      >
+        <View style={sliderStyles.trackBackground} />
+        {/* Filled track uses absolute positioning and animated width */}
+        <Animated.View
+          style={[
+            sliderStyles.trackFilled,
+            {
+              width: thumbX.interpolate({
+                inputRange: [0, trackWidthRef.current || 1],
+                outputRange: [0, trackWidthRef.current || 1],
+                extrapolate: 'clamp',
+              }),
+            },
+          ]}
+        />
+        {/* Thumb */}
+        <Animated.View style={[sliderStyles.thumb, thumbTranslateStyle]} />
+      </View>
+      <Text style={sliderStyles.sliderValue}>{localPercent}%</Text>
+    </View>
+  );
+}
 
 export default function CurtainModal({
   visible,
@@ -13,49 +160,40 @@ export default function CurtainModal({
   onSetPosition,
 }) {
   const [position, setPosition] = useState(0);
-  const [isSliding, setIsSliding] = useState(false);
-  const [curtainState, setCurtainState] = useState("unknown");
+  const [curtainState, setCurtainState] = useState('unknown');
   const [online, setOnline] = useState(null);
-  const [deviceImage, setDeviceImage] = useState(null);
   const [positionAbilityFound, setPositionAbilityFound] = useState(false);
-
 
   function extractPosition(abilities) {
     const byPercent = abilities.find(
-      a =>
-        a.attribute &&
-        typeof a.attribute.position_percent !== "undefined"
+      (a) => a.attribute && typeof a.attribute.position_percent !== 'undefined'
     );
     if (byPercent)
       return { found: true, value: Number(byPercent.attribute.position_percent) };
 
     const byPosition = abilities.find(
-      a =>
-        a.attribute &&
-        typeof a.attribute.position !== "undefined"
+      (a) => a.attribute && typeof a.attribute.position !== 'undefined'
     );
-    if (byPosition)
-      return { found: true, value: Number(byPosition.attribute.position) };
+    if (byPosition) return { found: true, value: Number(byPosition.attribute.position) };
 
     return { found: false, value: null };
   }
 
   function extractCurtainState(abilities) {
-    const curtainAbility = abilities.find(a =>
-      a.ability_name &&
-      (
-        a.ability_name.toLowerCase().includes("curtain") ||
-        a.ability_name.toLowerCase().includes("shade") ||
-        a.ability_name.toLowerCase().includes("cover")
-      )
+    const curtainAbility = abilities.find(
+      (a) =>
+        a.ability_name &&
+        (a.ability_name.toLowerCase().includes('curtain') ||
+          a.ability_name.toLowerCase().includes('shade') ||
+          a.ability_name.toLowerCase().includes('cover'))
     );
-    if (curtainAbility && typeof curtainAbility.state !== "undefined") {
+    if (curtainAbility && typeof curtainAbility.state !== 'undefined') {
       return curtainAbility.state;
     }
-    if (abilities.length > 0 && typeof abilities[0].state !== "undefined") {
+    if (abilities.length > 0 && typeof abilities[0].state !== 'undefined') {
       return abilities[0].state;
     }
-    return "unknown";
+    return 'unknown';
   }
 
   useEffect(() => {
@@ -68,23 +206,19 @@ export default function CurtainModal({
       // Extract and set position
       const { found, value } = extractPosition(abilities);
       setPositionAbilityFound(found);
-      if (found && !isSliding) setPosition(value ?? 0);
+      // Only update the displayed position if ability exists and value is a number
+      if (found && typeof value === 'number') {
+        setPosition(Number(value ?? 0));
+      }
 
-
-
-      // Extract and set device image and online
-      setDeviceImage(deviceStatus.result.device_picture_url || null);
+      // Extract online status
       setOnline(deviceStatus.result.online);
     } else {
       // Reset on modal close or deviceStatus missing
-      setCurtainState("unknown");
+      setCurtainState('unknown');
       setOnline(null);
-      setDeviceImage(null);
       setPositionAbilityFound(false);
-      setPosition(0);
     }
-    // Don't include isSliding as dependency or you'll get slider jitter
-    // eslint-disable-next-line
   }, [deviceStatus]);
 
   // Controls
@@ -92,13 +226,14 @@ export default function CurtainModal({
   const handlePause = () => onPause && onPause();
   const handleClose = () => onCloseCurtain && onCloseCurtain();
 
-  // Slider
+  // Calls from the slider while dragging (optional)
   const handleSliderChange = (val) => {
-    setIsSliding(true);
     setPosition(val);
   };
+
+  // Called when user releases the thumb
   const handleSlidingComplete = (val) => {
-    setIsSliding(false);
+    setPosition(val);
     onSetPosition && onSetPosition(val);
   };
 
@@ -107,15 +242,10 @@ export default function CurtainModal({
     deviceStatus?.result?.product_name ||
     deviceStatus?.result?.device_name ||
     deviceStatus?.result?.device_type ||
-    "Curtain";
+    'Curtain';
 
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.modalBackground}>
         <View style={styles.modalContent}>
           {/* Close Button */}
@@ -123,11 +253,8 @@ export default function CurtainModal({
             <Text style={{ fontSize: 22 }}>✕</Text>
           </TouchableOpacity>
 
-          {/* Title & Image */}
+          {/* Title */}
           <Text style={styles.title}>{deviceLabel}</Text>
-          {deviceImage && (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          )}
 
           {/* Status display */}
           {!deviceStatus ? (
@@ -138,11 +265,13 @@ export default function CurtainModal({
             <View style={styles.statusContainer}>
               <View style={styles.statusRow}>
                 <Text style={styles.label}>Online Status:</Text>
-                <Text style={[
-                  styles.value,
-                  online === true ? styles.online : styles.offline
-                ]}>
-                  {online === true ? "Online" : online === false ? "Offline" : "Unknown"}
+                <Text
+                  style={[
+                    styles.value,
+                    online === true ? styles.online : styles.offline,
+                  ]}
+                >
+                  {online === true ? 'Online' : online === false ? 'Offline' : 'Unknown'}
                 </Text>
               </View>
               <View style={styles.statusRow}>
@@ -151,11 +280,7 @@ export default function CurtainModal({
               </View>
               <View style={styles.statusRow}>
                 <Text style={styles.label}>Position:</Text>
-                <Text style={styles.value}>
-                  {positionAbilityFound
-                    ? `${position}%`
-                    : "unknown"}
-                </Text>
+                <Text style={styles.value}>{positionAbilityFound ? `${position}%` : 'unknown'}</Text>
               </View>
             </View>
           )}
@@ -175,28 +300,75 @@ export default function CurtainModal({
 
           {/* Position Slider */}
           {positionAbilityFound && (
-            <View style={styles.sliderContainer}>
-              <Text style={styles.sliderLabel}>Set Position:</Text>
-              <Slider
-                style={{ width: 220, height: 40 }}
-                minimumValue={0}
-                maximumValue={100}
-                step={1}
-                value={position}
-                minimumTrackTintColor="#32d2d6"
-                maximumTrackTintColor="#bbb"
-                thumbTintColor="#32d2d6"
-                onValueChange={handleSliderChange}
-                onSlidingComplete={handleSlidingComplete}
-              />
-              <Text style={styles.sliderValue}>{position}%</Text>
-            </View>
+            <DraggableSlider
+              value={position}
+              onChange={handleSliderChange}
+              onComplete={handleSlidingComplete}
+              disabled={false}
+            />
           )}
         </View>
       </View>
     </Modal>
   );
 }
+
+const sliderStyles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  sliderLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  trackContainer: {
+    width: 260,
+    height: 36,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  trackBackground: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ddd',
+  },
+  trackFilled: {
+    position: 'absolute',
+    left: 8,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#32d2d6',
+  },
+  thumb: {
+    position: 'absolute',
+    left: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 3,
+    borderColor: '#32d2d6',
+    top: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  sliderValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#32d2d6',
+    marginTop: 8,
+  },
+});
 
 const styles = StyleSheet.create({
   modalBackground: {
@@ -227,14 +399,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 16,
     textAlign: 'center',
-  },
-  deviceImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    borderRadius: 10,
-    resizeMode: 'contain',
-    backgroundColor: '#f0f0f0',
   },
   statusContainer: {
     width: '100%',
@@ -289,22 +453,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  sliderContainer: {
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  sliderLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 6,
-  },
-  sliderValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#32d2d6',
-    marginTop: 2,
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function FloodSensorModal({ visible, onClose, device, deviceStatus }) {
   // Support both LAN (your last JSON) and WAN (original API) data structures
@@ -8,7 +8,6 @@ export default function FloodSensorModal({ visible, onClose, device, deviceStatu
   let floodState = "unknown";
   let battery = undefined;
   let online = null;
-  let deviceImage = null;
   let deviceType = "";
   let productName = "";
 
@@ -42,8 +41,7 @@ export default function FloodSensorModal({ visible, onClose, device, deviceStatu
     battery = batteryAbility.state;
   }
 
-  // 3. Device image, type, and name
-  deviceImage = result?.device_picture_url || device?.device_picture_url || null;
+  // 3. Device type and name
   online = result?.online;
   deviceType = result?.device_type || device?.device_type || "";
   productName = result?.product_name || result?.device_name || device?.device_name || "";
@@ -53,7 +51,7 @@ export default function FloodSensorModal({ visible, onClose, device, deviceStatu
       animationType="slide"
       transparent={true}
       visible={visible}
-      onRequestClose={() => {}}
+      onRequestClose={onClose}
     >
       <View style={styles.modalBackground}>
         <View style={styles.modalContent}>
@@ -62,9 +60,6 @@ export default function FloodSensorModal({ visible, onClose, device, deviceStatu
           </TouchableOpacity>
 
           <Text style={styles.title}>{device?.device_name || productName || deviceType}</Text>
-          {deviceImage ? (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          ) : null}
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -137,14 +132,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 16,
     textAlign: 'center',
-  },
-  deviceImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    borderRadius: 10,
-    resizeMode: 'contain',
-    backgroundColor: '#f0f0f0',
   },
   statusContainer: {
     width: '100%',

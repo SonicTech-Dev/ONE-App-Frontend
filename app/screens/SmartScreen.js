@@ -49,7 +49,6 @@ export default function SmartScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [selectedDeviceStatus, setSelectedDeviceStatus] = useState(null);
-  const [lanHeaders, setLanHeaders] = useState(null);
   const [callbackRegistered, setCallbackRegistered] = useState(false);
 
   // Local IPv4 state
@@ -60,9 +59,9 @@ export default function SmartScreen({ navigation }) {
   const [lastRegisteredTransport, setLastRegisteredTransport] = useState(null); // 'lan' | 'wan' | null
 
   useEffect(() => {
-    console.log('[SmartScreen] selectedOtion:', selectedOption);
+    console.log('[SmartScreen] selectedOption:', selectedOption);
     console.log('[SmartScreen] callbackRegistered:', callbackRegistered);
-  }, [selectedOption, lanHeaders, callbackRegistered]);
+  }, [selectedOption, callbackRegistered]);
 
   // Init SDK once when we land on SmartScreen and detect device IPv4
   useEffect(() => {
@@ -99,9 +98,7 @@ export default function SmartScreen({ navigation }) {
     };
   }, []);
 
-
-  // Auto register SIP whenever selectedOption changes (LAN/WAN),
-  // after SDK init
+  // Auto register SIP whenever selectedOption changes (LAN/WAN), after SDK init
   useEffect(() => {
     const register = async () => {
       if (!sipInitialized) return;
@@ -134,17 +131,25 @@ export default function SmartScreen({ navigation }) {
   }, [sipInitialized, selectedOption, lastRegisteredTransport]);
 
   useEffect(() => {
-    if (
-      selectedOption === 'LAN' &&
-      lanHeaders &&
-      !callbackRegistered
-    ) {
+    if (selectedOption === 'LAN' && !callbackRegistered) {
       console.log('[SmartScreen] Ready to register callback!');
     }
-  }, [selectedOption, lanHeaders, callbackRegistered]);
+  }, [selectedOption, callbackRegistered]);
 
   // This function updates device state based on callback payload
   const handleRequest = (req, payload) => {
+    // Log the incoming request from the device to your local server
+    try {
+      console.log('[CallbackServer] Incoming callback request:', {
+        method: req?.method,
+        url: req?.url,
+        headers: req?.headers,
+      });
+    } catch {}
+    try {
+      console.log('[CallbackServer] Incoming callback payload:', payload);
+    } catch {}
+
     if (
       payload?.event_type === 'device' &&
       payload?.data?.payload?.device_id &&
@@ -158,7 +163,7 @@ export default function SmartScreen({ navigation }) {
             ...cat,
             items: cat.items.map((d) =>
               d.lan?.device_id === deviceId
-                ? { ...d, isOn: state === "on", status: state === "on" ? "On" : "Off" }
+                ? { ...d, isOn: state === 'on', status: state === 'on' ? 'On' : 'Off' }
                 : d
             ),
           }))
@@ -306,12 +311,16 @@ export default function SmartScreen({ navigation }) {
   // Build callback URL strictly with IPv4. Fallback to prior static IPv4 if detection fails.
   const callbackHost = localIpv4 && ipv4Regex.test(localIpv4) ? localIpv4 : '192.168.2.105';
   const callbackUrl = `http://${callbackHost}:8080/`;
+  useEffect(() => {
+    console.log('[SmartScreen] Callback URL (listening):', callbackUrl);
+  }, [callbackUrl]);
 
   return (
     <Screen>
       <Animated.View style={[styles.headerContainer, { transform: [{ translateY: headerTranslateY }] }]}>
         <Header />
-        <StatsSection selectedOption={selectedOption} setSelectedOption={setSelectedOption} lanHeaders={lanHeaders}/>
+        {/* lanHeaders prop removed from StatsSection if not used there; keep if required */}
+        <StatsSection selectedOption={selectedOption} setSelectedOption={setSelectedOption} />
       </Animated.View>
       <Animated.View style={[styles.tabsContainer, { transform: [{ translateY: tabsTranslateY }] }]}>
         <Tabs tabs={categories.map((c) => c.category)} onTabChange={handleTabChange} activeTab={activeTab} />
@@ -324,11 +333,11 @@ export default function SmartScreen({ navigation }) {
         <CallbackRegistration
           deviceCallbackUrl="http://192.168.2.115/api/v1.0/callback"
           callbackUrl={callbackUrl}                 // Use detected IPv4 instead of static
-          lanHeaders={lanHeaders}                   // Uses the prebuilt headers on LAN selection
           callbackId="c45e846ca23ab42c9ae469d988ae32a96"
           listenList={['device']}
-          run={selectedOption === 'LAN' && !!lanHeaders && !callbackRegistered}
+          run={selectedOption === 'LAN' && !callbackRegistered}
           onStatus={(status, res) => {
+            console.log('[SmartScreen] Callback registration status:', status, res);
             if (status === 'success') setCallbackRegistered(true);
             if (status === 'error') Alert.alert('Callback Registration Error', res?.message || 'Failed to register callback.');
           }}
@@ -341,7 +350,6 @@ export default function SmartScreen({ navigation }) {
         navigation={navigation}
         setSelectedDevice={setSelectedDevice}
         setModalVisible={setModalVisible}
-        lanHeaders={lanHeaders}
         selectedOption={selectedOption}
         activeTab={activeTab}
       />

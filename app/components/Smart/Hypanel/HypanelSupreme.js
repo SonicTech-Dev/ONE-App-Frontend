@@ -1,26 +1,23 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
-export default function HyPanelSupremeModal({ visible, onClose, device, deviceStatus }) {
-  // Support both WAN and LAN response shapes
+export default function HyPanelLuxModal({ visible, onClose, device, deviceStatus }) {
+  // Support both WAN and LAN response shapes; ignore sub_devices
   const result = deviceStatus?.result || deviceStatus;
 
   const abilities = result?.abilities || [];
   const online = result?.online;
-  const deviceImage = result?.device_picture_url || device?.device_picture_url || null;
   const deviceType = result?.device_type || device?.device_type || '';
   const productName =
     result?.product_name ||
     result?.device_name ||
     device?.device_name ||
     'HyPanel Supreme';
-  const spaceName =
-    result?.space?.space_name ||
-    result?.space?.spaceName ||
-    '';
+  const spaceName = result?.space?.space_name || '';
 
   // Helpers
-  const findAbility = (predicate) => abilities.find(predicate);
+  const findAbilityExact = (name) =>
+    abilities.find(a => a.ability_name && a.ability_name.toLowerCase() === name.toLowerCase());
 
   const displaySensorValue = (ability, defaultUnit = '') => {
     if (!ability || ability.state === undefined || ability.state === null) return 'unknown';
@@ -30,17 +27,12 @@ export default function HyPanelSupremeModal({ visible, onClose, device, deviceSt
     return unit ? `${state} ${unit}` : state;
   };
 
-  // Parse abilities (WAN may have "--", LAN has numeric + unit)
-  const tempAbility = findAbility(a => a.ability_name?.toLowerCase() === 'temperature');
-  const humidityAbility = findAbility(a => a.ability_name?.toLowerCase() === 'humidity');
-  const motionAbility = findAbility(a => a.ability_name?.toLowerCase() === 'motion');
-  const luxAbility = findAbility(a => (a.ability_name || '').toLowerCase().includes('illuminance'));
+  // Parse abilities (only temperature & humidity remain)
+  const tempAbility = findAbilityExact('temperature');
+  const humidityAbility = findAbilityExact('humidity');
 
   const temperature = displaySensorValue(tempAbility, '°C');
   const humidity = displaySensorValue(humidityAbility, '%');
-  const illuminance = displaySensorValue(luxAbility, 'lx');
-
-  const motionState = motionAbility?.state; // "on" | "off" | "--" | undefined
 
   return (
     <Modal
@@ -56,10 +48,6 @@ export default function HyPanelSupremeModal({ visible, onClose, device, deviceSt
           </TouchableOpacity>
 
           <Text style={styles.title}>{productName || deviceType}</Text>
-
-          {deviceImage ? (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          ) : null}
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -115,36 +103,6 @@ export default function HyPanelSupremeModal({ visible, onClose, device, deviceSt
                   {humidity}
                 </Text>
               </View>
-
-              {/* Motion */}
-              {motionAbility ? (
-                <View style={styles.statusRow}>
-                  <Text style={styles.label}>Motion:</Text>
-                  <Text style={[
-                    styles.value,
-                    motionState === 'on' ? styles.on : motionState === 'off' ? styles.off : styles.unknown
-                  ]}>
-                    {motionState === 'on'
-                      ? 'MOTION DETECTED'
-                      : motionState === 'off'
-                      ? 'No Motion'
-                      : String(motionState || 'unknown')}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Illuminance */}
-              {luxAbility ? (
-                <View style={styles.statusRow}>
-                  <Text style={styles.label}>Illuminance:</Text>
-                  <Text style={[
-                    styles.value,
-                    illuminance === 'unknown' ? styles.unknown : styles.normal
-                  ]}>
-                    {illuminance}
-                  </Text>
-                </View>
-              ) : null}
             </View>
           )}
         </View>
@@ -162,7 +120,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    minHeight: '45%',
+    minHeight: '50%',
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
@@ -223,10 +181,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   on: {
-    color: 'red',
+    color: 'green',
   },
   off: {
-    color: 'green',
+    color: '#d9534f',
   },
   unknown: {
     color: '#888',
@@ -238,6 +196,6 @@ const styles = StyleSheet.create({
     color: 'green',
   },
   offline: {
-    color: 'red',
+    color: '#d9534f',
   },
 });

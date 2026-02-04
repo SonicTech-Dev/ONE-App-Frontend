@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function HyPanelLuxModal({ visible, onClose, device, deviceStatus }) {
   // Support both WAN and LAN response shapes; ignore sub_devices
@@ -7,7 +7,6 @@ export default function HyPanelLuxModal({ visible, onClose, device, deviceStatus
 
   const abilities = result?.abilities || [];
   const online = result?.online;
-  const deviceImage = result?.device_picture_url || device?.device_picture_url || null;
   const deviceType = result?.device_type || device?.device_type || '';
   const productName =
     result?.product_name ||
@@ -20,9 +19,6 @@ export default function HyPanelLuxModal({ visible, onClose, device, deviceStatus
   const findAbilityExact = (name) =>
     abilities.find(a => a.ability_name && a.ability_name.toLowerCase() === name.toLowerCase());
 
-  const findAbilityIncludes = (substr) =>
-    abilities.find(a => a.ability_name && a.ability_name.toLowerCase().includes(substr.toLowerCase()));
-
   const displaySensorValue = (ability, defaultUnit = '') => {
     if (!ability || ability.state === undefined || ability.state === null) return 'unknown';
     const state = String(ability.state);
@@ -34,24 +30,9 @@ export default function HyPanelLuxModal({ visible, onClose, device, deviceStatus
   // Parse abilities
   const tempAbility = findAbilityExact('temperature');
   const humidityAbility = findAbilityExact('humidity');
-  const motionAbility = findAbilityExact('motion');
-  const luxAbility = findAbilityIncludes('illuminance');
-  const energyAbility = findAbilityExact('energy');
-  const powerAbility = findAbilityExact('power');
 
   const temperature = displaySensorValue(tempAbility, '°C');
   const humidity = displaySensorValue(humidityAbility, '%');
-  const illuminance = displaySensorValue(luxAbility, 'lx'); // default unit if missing
-  const energy = displaySensorValue(energyAbility, ''); // unit often not provided in WAN; avoid guessing
-  const power = displaySensorValue(powerAbility, ''); // unit often not provided in WAN; avoid guessing
-
-  const motionState = motionAbility?.state; // "on" | "off" | "--" | undefined
-
-  // Light channels (some devices expose light, light1..light4)
-  const lightNames = ['light', 'light1', 'light2', 'light3', 'light4'];
-  const lightAbilities = lightNames
-    .map(name => findAbilityExact(name))
-    .filter(Boolean);
 
   return (
     <Modal
@@ -67,10 +48,6 @@ export default function HyPanelLuxModal({ visible, onClose, device, deviceStatus
           </TouchableOpacity>
 
           <Text style={styles.title}>{productName || deviceType}</Text>
-
-          {deviceImage ? (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          ) : null}
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -126,80 +103,6 @@ export default function HyPanelLuxModal({ visible, onClose, device, deviceStatus
                   {humidity}
                 </Text>
               </View>
-
-              {/* Motion */}
-              {motionAbility ? (
-                <View style={styles.statusRow}>
-                  <Text style={styles.label}>Motion:</Text>
-                  <Text style={[
-                    styles.value,
-                    motionState === 'on' ? styles.on : motionState === 'off' ? styles.off : styles.unknown
-                  ]}>
-                    {motionState === 'on'
-                      ? 'MOTION DETECTED'
-                      : motionState === 'off'
-                      ? 'No Motion'
-                      : String(motionState || 'unknown')}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Illuminance */}
-              {luxAbility ? (
-                <View style={styles.statusRow}>
-                  <Text style={styles.label}>Illuminance:</Text>
-                  <Text style={[
-                    styles.value,
-                    illuminance === 'unknown' ? styles.unknown : styles.normal
-                  ]}>
-                    {illuminance}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Energy */}
-              {energyAbility ? (
-                <View style={styles.statusRow}>
-                  <Text style={styles.label}>Energy:</Text>
-                  <Text style={[
-                    styles.value,
-                    energy === 'unknown' ? styles.unknown : styles.normal
-                  ]}>
-                    {energy}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Power */}
-              {powerAbility ? (
-                <View style={styles.statusRow}>
-                  <Text style={styles.label}>Power:</Text>
-                  <Text style={[
-                    styles.value,
-                    power === 'unknown' ? styles.unknown : styles.normal
-                  ]}>
-                    {power}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Lights */}
-              {lightAbilities.length > 0 && lightAbilities.map((la, idx) => {
-                const name = la.ability_name;
-                const label = name === 'light' ? 'Light' : name.replace('light', 'Light ');
-                const state = la.state;
-                return (
-                  <View style={styles.statusRow} key={`${name}-${idx}`}>
-                    <Text style={styles.label}>{label}:</Text>
-                    <Text style={[
-                      styles.value,
-                      state === 'on' ? styles.on : state === 'off' ? styles.off : styles.unknown
-                    ]}>
-                      {state === 'on' ? 'On' : state === 'off' ? 'Off' : String(state || 'unknown')}
-                    </Text>
-                  </View>
-                );
-              })}
             </View>
           )}
         </View>
@@ -238,14 +141,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 16,
     textAlign: 'center',
-  },
-  deviceImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    borderRadius: 10,
-    resizeMode: 'contain',
-    backgroundColor: '#f0f0f0',
   },
   statusContainer: {
     width: '100%',

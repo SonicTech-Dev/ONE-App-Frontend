@@ -1,15 +1,13 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function DoorWindowSensorModal({ visible, onClose, device, deviceStatus }) {
   // Handles both WAN and LAN style responses
 
   // Default values
   let doorState = "unknown";
-  let tamperState = "unknown";
   let battery = undefined;
   let online = null;
-  let deviceImage = null;
 
   // Support both LAN and WAN-style response
   const result = deviceStatus?.result || deviceStatus;
@@ -31,20 +29,7 @@ export default function DoorWindowSensorModal({ visible, onClose, device, device
       ? doorAbility.state
       : "unknown";
 
-  // 2. Tamper Alarm
-  // WAN: "Tamper Alarm" with attribute.type === "tamper"
-  // LAN: ability_name "Tamper" (case-insensitive)
-  const tamperAbility = abilities.find(a =>
-    (a.ability_name && a.ability_name.toLowerCase() === "tamper alarm" && a.attribute && a.attribute.type === "tamper")
-    ||
-    (a.ability_name && a.ability_name.toLowerCase() === "tamper")
-  );
-  tamperState =
-    tamperAbility && tamperAbility.state !== undefined
-      ? tamperAbility.state
-      : "unknown";
-
-  // 3. Battery Level (handle both "Battery Level" and "battery" and attribute.type === "battery")
+  // 2. Battery Level (handle both "Battery Level" and "battery" and attribute.type === "battery")
   const batteryAbility = abilities.find(a =>
     (a.ability_name && (a.ability_name.toLowerCase() === "battery" || a.ability_name.toLowerCase() === "battery level"))
     ||
@@ -54,7 +39,6 @@ export default function DoorWindowSensorModal({ visible, onClose, device, device
     battery = batteryAbility.state;
   }
 
-  deviceImage = result?.device_picture_url || device?.device_picture_url || null;
   online = result?.online;
 
   return (
@@ -71,9 +55,6 @@ export default function DoorWindowSensorModal({ visible, onClose, device, device
           </TouchableOpacity>
 
           <Text style={styles.title}>{device?.device_name || result?.device_name}</Text>
-          {deviceImage ? (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          ) : null}
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -97,15 +78,6 @@ export default function DoorWindowSensorModal({ visible, onClose, device, device
                   doorState === "on" ? styles.on : doorState === "off" ? styles.off : styles.unknown
                 ]}>
                   {doorState === "on" ? "OPEN" : doorState === "off" ? "CLOSED" : String(doorState)}
-                </Text>
-              </View>
-              <View style={styles.statusRow}>
-                <Text style={styles.label}>Tamper Alarm:</Text>
-                <Text style={[
-                  styles.value,
-                  tamperState === "on" ? styles.on : tamperState === "off" ? styles.off : styles.unknown
-                ]}>
-                  {tamperState === "on" ? "TAMPERED" : tamperState === "off" ? "OK" : String(tamperState)}
                 </Text>
               </View>
               {/* Only render the Battery row if battery is defined */}
@@ -155,14 +127,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 16,
     textAlign: 'center',
-  },
-  deviceImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    borderRadius: 10,
-    resizeMode: 'contain',
-    backgroundColor: '#f0f0f0',
   },
   statusContainer: {
     width: '100%',

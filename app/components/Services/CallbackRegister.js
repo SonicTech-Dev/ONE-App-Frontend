@@ -1,65 +1,103 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { buildLanHeaders } from '../Smart/SmartScreenSections/auth';
 
-/**
- * CallbackRegister Component
- * - Sends a POST request to register a callback with the external server.
- * - Uses props passed for full customization and manages error/success responses.
- */
 export default function CallbackRegistration({
-  deviceCallbackUrl, // The external server's callback registration endpoint
-  callbackUrl,       // Your app's callback URL
-  lanHeaders,        // Full LAN headers (including Authorization)
-  callbackId,        // Unique ID for the callback
-  listenList,        // List of event types to listen for
-  run,               // Boolean flag to trigger registration
-  onStatus           // Callback for success or error status
+  deviceCallbackUrl, // e.g. http://192.168.2.115/api/v1.0/callback
+  callbackUrl,       // e.g. http://<your-ip>:8080/
+  callbackId,
+  listenList,
+  run,
+  onStatus,          // function(status: 'success' | 'error', data?: any)
 }) {
+  const [lanHeaders, setLanHeaders] = useState(null);
+
+  // Build LAN headers once
   useEffect(() => {
-    // Trigger the callback registration only if `run` is true
-    if (run) {
-      const configureCallback = async () => {
-        try {
-          // Define request payload based on the provided format
-          const payload = {
-            command: "configure_callback",
-            id: callbackId,
-            param: {
-              url: callbackUrl,
-              listen_list: listenList,
-            },
-          };
+    let mounted = true;
+    (async () => {
+      try {
+        const headers = await buildLanHeaders();
+        if (mounted) setLanHeaders(headers || null);
+        console.log('[CallbackRegistration] Built LAN headers:', headers);
+      } catch (err) {
+        console.error('[CallbackRegistration] Failed to build LAN headers:', err);
+        if (mounted) setLanHeaders(null);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
-          // Send the POST request to register the callback
-          const response = await fetch(deviceCallbackUrl, {
-            method: 'POST',
-            headers: {
-              ...lanHeaders, // Use the full lanHeaders directly
-              'Content-Type': 'application/json', // Ensure payload format
-              Accept: 'application/json',        // Expected response format
-            },
-            body: JSON.stringify(payload),        // Convert payload to JSON
-          });
-
-          const data = await response.json();      // Parse JSON response
-
-          // Handle response based on success/error status
-          if (response.ok) {
-            onStatus('success', data);            // Notify successful registration
-          } else {
-            console.error('Callback Registration Failed:', data);
-            onStatus('error', data);              // Notify of failure
-          }
-        } catch (error) {
-          // Catch network errors or unexpected issues
-          console.error('Callback Registration Error:', error.message);
-          onStatus('error', { message: error.message });
-        }
-      };
-
-      configureCallback(); // Execute the callback registration logic
+  // Register callback when run=true and headers are ready
+  useEffect(() => {
+    if (!run) return;
+    if (!lanHeaders || typeof lanHeaders !== 'object') {
+      console.warn('[CallbackRegistration] LAN headers not ready, cannot register callback.');
+      onStatus?.('error', { message: 'LAN headers not ready' });
+      return;
     }
-  }, [deviceCallbackUrl, callbackUrl, lanHeaders, callbackId, listenList, run, onStatus]);
 
-  // Return null since this component does not render any UI
+    const controller = new AbortController();
+
+    const configureCallback = async () => {
+      try {
+        const payload = {
+          command: 'configure_callback',
+          id: callbackId,
+          param: {
+            url: callbackUrl,
+            listen_list: listenList,
+          },
+        };
+
+        // Log the outgoing request
+        const reqHeaders = {
+          ...lanHeaders,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        };
+        console.log('[CallbackRegistration] Request URL:', deviceCallbackUrl);
+        console.log('[CallbackRegistration] Request Headers:', reqHeaders);
+        console.log('[CallbackRegistration] Request Payload:', payload);
+
+        const response = await fetch(deviceCallbackUrl, {
+          method: 'POST',
+          headers: reqHeaders,
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        // Collect response headers if available
+        const respHeaders = {};
+        try {
+          response.headers?.forEach?.((v, k) => { respHeaders[k] = v; });
+        } catch {}
+
+        // Read body as text, then try parse JSON for logging
+        const text = await response.text();
+        let data = null;
+        try { data = text ? JSON.parse(text) : null; } catch {}
+
+        // Log the response
+        console.log('[CallbackRegistration] Response Status:', response.status, response.statusText);
+        console.log('[CallbackRegistration] Response Headers:', respHeaders);
+        console.log('[CallbackRegistration] Response Body:', data ?? text);
+
+        // Pass parsed data (if any) to onStatus
+        if (response.ok) {
+          onStatus?.('success', data ?? { status: response.status });
+        } else {
+          onStatus?.('error', data ?? { status: response.status, statusText: response.statusText });
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        console.error('[CallbackRegistration] Network/Error:', error);
+        onStatus?.('error', { message: error.message || 'Network error' });
+      }
+    };
+
+    configureCallback();
+    return () => controller.abort();
+  }, [run, lanHeaders, deviceCallbackUrl, callbackUrl, callbackId, listenList, onStatus]);
+
   return null;
 }
