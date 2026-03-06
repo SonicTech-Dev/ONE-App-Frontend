@@ -71,7 +71,7 @@ export default function DeviceModals({
       />
     );
   }
-  if (title === "Curtain-Bedroom" || title === "Curtain-Reception") {
+  if (title === "Curtain-Bedroom" || title === "Curtain-LivingRoom") {
     return (
       <CurtainModal
         visible={modalVisible}
@@ -86,6 +86,7 @@ export default function DeviceModals({
     );
   }
   if (
+  title.includes("AC") ||
   title.includes("Thermostat 1") ||
   title.includes("Thermostat 2") ||
   title.includes("Super General AC")

@@ -69,7 +69,7 @@ export default function SmartScreen({ navigation }) {
     (async () => {
       const permissionsGranted = await requestPermissionsIfNeeded();
       if (!permissionsGranted) {
-        Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
+        Console.log('Permission Denied', 'Camera and microphone permissions are required for calls.');
         return;
       }
       try {
@@ -80,7 +80,7 @@ export default function SmartScreen({ navigation }) {
         }
       } catch (e) {
         console.warn('[SmartScreen] initSdk error:', e);
-        Alert.alert('SDK Error', e?.message || 'Failed to initialize SIP SDK.');
+        Console.log('SDK Error', e?.message || 'Failed to initialize SIP SDK.');
       }
 
       // Detect local IPv4 address
@@ -107,7 +107,7 @@ export default function SmartScreen({ navigation }) {
         if (selectedOption === 'LAN') {
           if (lastRegisteredTransport !== 'lan') {
             console.log('[SmartScreen] Registering SIP via LAN...');
-            const res = await Akuvox.registerSipLan(LAN_SIP_TOKEN, 'User bela');
+            const res = await Akuvox.registerSipLan(LAN_SIP_TOKEN, 'Laguna Mockup One-Development');
             console.log('[SmartScreen] LAN register result:', res);
             setLastRegisteredTransport('lan');
             await AsyncStorage.setItem('registeredTransport', 'lan');
@@ -115,7 +115,7 @@ export default function SmartScreen({ navigation }) {
         } else if (selectedOption === 'WAN') {
           if (lastRegisteredTransport !== 'wan') {
             console.log('[SmartScreen] Registering SIP via WAN...');
-            const res = await Akuvox.registerSip(WAN_SIP_TOKEN, 'User bela');
+            const res = await Akuvox.registerSip(WAN_SIP_TOKEN, 'Laguna Mockup One-Development');
             console.log('[SmartScreen] WAN register result:', res);
             setLastRegisteredTransport('wan');
             await AsyncStorage.setItem('registeredTransport', 'wan');
@@ -123,7 +123,7 @@ export default function SmartScreen({ navigation }) {
         }
       } catch (error) {
         console.warn('[SmartScreen] SIP registration error:', error);
-        Alert.alert('SIP Registration Error', error?.message || 'Failed to register SIP.');
+        Console.log('SIP Registration Error', error?.message || 'Failed to register SIP.');
       }
     };
 
@@ -213,7 +213,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const newIsOn = newControl === 'on';
@@ -237,7 +237,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const command = dev.commandPair['on'];
@@ -252,7 +252,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const attribute = mode === 'lan'
@@ -267,7 +267,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const attribute = mode === 'lan'
@@ -282,7 +282,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const attribute = mode === 'lan'
@@ -297,7 +297,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const attribute = mode === 'lan'
@@ -339,7 +339,7 @@ export default function SmartScreen({ navigation }) {
           onStatus={(status, res) => {
             console.log('[SmartScreen] Callback registration status:', status, res);
             if (status === 'success') setCallbackRegistered(true);
-            if (status === 'error') Alert.alert('Callback Registration Error', res?.message || 'Failed to register callback.');
+            if (status === 'error') console.log('Callback Registration Error', res?.message || 'Failed to register callback.');
           }}
         />
       )}

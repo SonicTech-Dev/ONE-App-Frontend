@@ -23,8 +23,10 @@ export default function OnlineStatus({
   wanBackendUrl = 'https://one-development.soniciot.com/online_status/',
   lanUrl = 'http://192.168.2.115/api/v1.0/device',
   requestId = 'c45e846ca23ab42c9ae469d988ae32a96',
-  deviceId = 'd4f54a92bea2a440c8a6a23d0b636dcf7',
-  residenceId = 'r45844047053e43d78fe5272c5badbd3a',
+  //oniste - deviceId = 'd4f54a92bea2a440c8a6a23d0b636dcf7',
+  deviceId = 'd03852d726b074d77a7d658e7fac7d3b6',
+  //onsite - residenceId = 'r45844047053e43d78fe5272c5badbd3a',
+  residenceId = 'r2bd2c6d2aecc4ce3be11e25b4ecd3c82'
 }) {
   const [isOnline, setIsOnline] = useState(null);
   const [loading, setLoading] = useState(false);

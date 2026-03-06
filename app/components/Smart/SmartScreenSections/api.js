@@ -46,7 +46,8 @@ export const controlDevice = async (
       command: 'batch_control_device',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
       param: {
-        residence_id: 'r45844047053e43d78fe5272c5badbd3a',
+        //onsite - residence_id: 'r45844047053e43d78fe5272c5badbd3a',
+        residence_id: 'r2bd2c6d2aecc4ce3be11e25b4ecd3c82',
         devices: [
           {
             device_id: deviceId,
@@ -119,7 +120,8 @@ export const deviceStatus = async (
       command: 'get_device_info',
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
       param: {
-        residence_id: 'r45844047053e43d78fe5272c5badbd3a',
+        //onsite - residence_id: 'r45844047053e43d78fe5272c5badbd3a',
+        residence_id: 'r2bd2c6d2aecc4ce3be11e25b4ecd3c82',
         device_id: deviceId,
       },
     };

@@ -31,7 +31,7 @@ export default function DeviceListOnlineStatus({
 
   // Payload values
   requestId = 'c45e846ca23ab42c9ae469d988ae32a96',
-  residenceId = 'r45844047053e43d78fe5272c5badbd3a',
+  residenceId = 'r2bd2c6d2aecc4ce3be11e25b4ecd3c82',
 
   // Callbacks
   onStatuses = () => {},

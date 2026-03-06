@@ -33,7 +33,7 @@ const DeviceTile = ({
     : {};
 
   // Don't show toggle if device is a sensor
-  const isSensor = title.toLowerCase().includes("sensor") || title.toLowerCase().includes("detector");
+  const isSensor = title.toLowerCase().includes("sensor") || title.toLowerCase().includes("detector") ||title.toLowerCase().includes("hypanel");
 
   return (
     <Wrapper style={[styles.tileContainer, style, { backgroundColor: color }]} {...wrapperProps}>
