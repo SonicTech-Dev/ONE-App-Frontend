@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { buildLanHeaders } from '../Smart/SmartScreenSections/auth';
+import { buildLanHeaders } from '../Smart/SmartScreenSections/LanAuth';
 
 export default function CallbackRegistration({
   deviceCallbackUrl, // e.g. http://192.168.2.115/api/v1.0/callback

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { buildLanHeaders } from './SmartScreenSections/auth';
+import { buildLanHeaders } from './SmartScreenSections/LanAuth';
 
 /**
  * DeviceListOnlineStatus

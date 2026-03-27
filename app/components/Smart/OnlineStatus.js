@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text } from 'react-native';
 import styled from 'styled-components/native';
-import { buildLanHeaders } from './SmartScreenSections/auth';
+import { buildLanHeaders } from './SmartScreenSections/LanAuth';
+import { buildWanHeaders } from './SmartScreenSections/WanAuth';
+
 
 const StatusText = styled.Text`
   font-size: 16px;
@@ -26,7 +28,7 @@ export default function OnlineStatus({
   //oniste - deviceId = 'd4f54a92bea2a440c8a6a23d0b636dcf7',
   deviceId = 'd03852d726b074d77a7d658e7fac7d3b6',
   //onsite - residenceId = 'r45844047053e43d78fe5272c5badbd3a',
-  residenceId = 'r2bd2c6d2aecc4ce3be11e25b4ecd3c82'
+  residenceId = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82'
 }) {
   const [isOnline, setIsOnline] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -55,11 +57,16 @@ export default function OnlineStatus({
           console.log('[OnlineStatus] selectedOption: WAN -> calling backend proxy', wanBackendUrl);
           const res = await fetch(wanBackendUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            headers: await buildWanHeaders(),
             body: JSON.stringify(wanBody),
             signal: controller.signal,
           });
           if (!res.ok) {
+            const errorBody = await res.text(); 
+            console.warn('[OnlineStatus] WAN backend non-2xx', { 
+              status: res.status, 
+              body: errorBody //<--- PRINTING IT HERE!
+            });
             console.warn('[OnlineStatus] WAN backend non-2xx', { status: res.status, url: wanBackendUrl });
             if (mounted) setIsOnline(false);
             return;
@@ -124,7 +131,7 @@ export default function OnlineStatus({
 
         const fetchPromise = fetch(lanUrl, {
           method: 'POST',
-          headers,
+          headers: lanBody,
           body: JSON.stringify(lanBody),
           signal: controller.signal,
         });

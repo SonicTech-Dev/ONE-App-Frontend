@@ -9,9 +9,9 @@ import {
   Dimensions,
 } from 'react-native';
 import RTSPViewer from './RTSPViewer';
-import { buildLanHeaders } from '../SmartScreenSections/auth';
+import { buildLanHeaders } from '../SmartScreenSections/LanAuth';
 
-const FALLBACK_LAN_RTSP_URL = 'rtsp://admin:Sonic123@192.168.2.114:554';
+const FALLBACK_LAN_RTSP_URL = 'rtsp://admin:Sonic123@192.168.2.114:554/';
 const FALLBACK_WAN_RTSP_URL = 'rtsp://user:J19IE753w25867v6@35.156.199.213:554/0C11052C6E92';
 const FALLBACK_DEVICE_ID = '0C11052C6E92';
 const BACKEND_CONTROL_URL = 'https://one-development.soniciot.com/control_devices/';
@@ -148,7 +148,7 @@ export default function Intercom({ route }) {
             onPress={onPressUnlockDoor}
             activeOpacity={0.85}
           >
-            <Text style={styles.buttonText}>Unlock Door</Text>
+            <Text style={styles.buttonText}>Unock Door</Text>
           </TouchableOpacity>
         </View>
       </View>

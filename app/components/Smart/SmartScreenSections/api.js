@@ -6,7 +6,7 @@ export const controlDevice = async (
   command,
   attribute,
   selectedOption,
-  LAN_HEADERS // required, must be passed through props
+  HEADERS,
 ) => {
   // Normalize selectedOption
   const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
@@ -23,12 +23,12 @@ export const controlDevice = async (
         ...(attribute ? { attribute } : {}),
       },
     };
-    console.log('LAN headers received for API:', LAN_HEADERS);
+    console.log('LAN headers received for API:', HEADERS);
 
     try {
       const response = await fetch(lanApiUrl, {
         method: 'POST',
-        headers: LAN_HEADERS,
+        headers: HEADERS,
         body: JSON.stringify(body),
       });
 
@@ -47,7 +47,7 @@ export const controlDevice = async (
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
       param: {
         //onsite - residence_id: 'r45844047053e43d78fe5272c5badbd3a',
-        residence_id: 'r2bd2c6d2aecc4ce3be11e25b4ecd3c82',
+        residence_id: 'rabd2c6d2aecc4ce3be11e25b4ecd3c82',
         devices: [
           {
             device_id: deviceId,
@@ -62,9 +62,7 @@ export const controlDevice = async (
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: HEADERS,
         body: JSON.stringify(body),
       });
 
@@ -83,7 +81,7 @@ export const deviceStatus = async (
   deviceId,
   selectedOption,
   setSelectedDeviceStatus,
-  LAN_HEADERS // required, must be passed through props
+  HEADERS // required, must be passed through props
 ) => {
   // Normalize selectedOption
   const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
@@ -100,7 +98,7 @@ export const deviceStatus = async (
     try {
       const response = await fetch(lanApiUrl, {
         method: 'POST',
-        headers: LAN_HEADERS,
+        headers: HEADERS,
         body: JSON.stringify(body),
       });
 
@@ -121,16 +119,14 @@ export const deviceStatus = async (
       id: 'c45e846ca23ab42c9ae469d988ae32a96',
       param: {
         //onsite - residence_id: 'r45844047053e43d78fe5272c5badbd3a',
-        residence_id: 'r2bd2c6d2aecc4ce3be11e25b4ecd3c82',
+        residence_id: 'rabd2c6d2aecc4ce3be11e25b4ecd3c82',
         device_id: deviceId,
       },
     };
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: HEADERS,
         body: JSON.stringify(body),
       });
 

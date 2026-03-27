@@ -87,7 +87,7 @@ autoCapitalize="none"
 secureTextEntry={!visible}/>
 
           <AppButton
-            title={"Continue"}
+            title={"Login"}
             text="background"
             disabled={!isValidEmail(email) || !password || loading}
             opacity={loading ? 0.5 : 1}
