@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { buildLanHeaders } from './SmartScreenSections/LanAuth';
+import { buildWanHeaders } from './SmartScreenSections/WanAuth';
 
 /**
  * DeviceListOnlineStatus
@@ -31,7 +32,8 @@ export default function DeviceListOnlineStatus({
 
   // Payload values
   requestId = 'c45e846ca23ab42c9ae469d988ae32a96',
-  residenceId = 'r2bd2c6d2aecc4ce3be11e25b4ecd3c82',
+  //onsite - residenceId = 'r45844047053e43d78fe5272c5badbd3a',
+  residenceId = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82',
 
   // Callbacks
   onStatuses = () => {},
@@ -62,10 +64,7 @@ export default function DeviceListOnlineStatus({
         if (selectedOption === 'WAN') {
           const res = await fetch(wanBackendUrl, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-            },
+            headers: await buildWanHeaders(),
             body: JSON.stringify(wanBody),
             signal: controller.signal,
           });
