@@ -1,9 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text } from 'react-native';
 import styled from 'styled-components/native';
-import { buildLanHeaders } from './SmartScreenSections/LanAuth';
-import { buildWanHeaders } from './SmartScreenSections/WanAuth';
-
+import { useAuth } from '../../context/AuthContext';
 
 const StatusText = styled.Text`
   font-size: 16px;
@@ -30,6 +28,7 @@ export default function OnlineStatus({
   //onsite - residenceId = 'r45844047053e43d78fe5272c5badbd3a',
   residenceId = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82'
 }) {
+  const { getActiveLanToken, getActiveWanToken } = useAuth();
   const [isOnline, setIsOnline] = useState(null);
   const [loading, setLoading] = useState(false);
   const intervalRef = useRef(null);
@@ -55,9 +54,14 @@ export default function OnlineStatus({
       try {
         if (selectedOption === 'WAN') {
           console.log('[OnlineStatus] selectedOption: WAN -> calling backend proxy', wanBackendUrl);
+          const activeToken = await getActiveWanToken();
           const res = await fetch(wanBackendUrl, {
             method: 'POST',
-            headers: await buildWanHeaders(),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${activeToken}`
+            },
             body: JSON.stringify(wanBody),
             signal: controller.signal,
           });
@@ -77,42 +81,14 @@ export default function OnlineStatus({
           return;
         }
 
-        // LAN path: build fresh headers for every request
-        console.log('[OnlineStatus] selectedOption: LAN -> building fresh headers and calling LAN URL', lanUrl);
-
-        let rawHeaders = {};
-        try {
-          rawHeaders = await buildLanHeaders();
-        } catch (e) {
-          console.warn('[OnlineStatus] buildLanHeaders failed, marking offline.', e);
-          if (mounted) setIsOnline(false);
-          return;
-        }
-
-        const possibleToken =
-          rawHeaders.Authorization ??
-          rawHeaders.token ??
-          rawHeaders.authToken ??
-          null;
-
-        const Authorization =
-          rawHeaders.Authorization && rawHeaders.Authorization.startsWith('Bearer ')
-            ? rawHeaders.Authorization
-            : possibleToken
-            ? possibleToken.startsWith('Bearer ')
-              ? possibleToken
-              : `Bearer ${possibleToken}`
-            : undefined;
+        // LAN path
+        console.log('[OnlineStatus] selectedOption: LAN -> calling LAN URL', lanUrl);
+        const activeToken = await getActiveLanToken();
 
         const headers = {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...(Authorization ? { Authorization } : {}),
-          ...Object.fromEntries(
-            Object.entries(rawHeaders).filter(
-              ([k]) => !['Authorization', 'token', 'authToken'].includes(k)
-            )
-          ),
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${activeToken}`
         };
 
         if (!headers.Authorization) {
@@ -131,7 +107,7 @@ export default function OnlineStatus({
 
         const fetchPromise = fetch(lanUrl, {
           method: 'POST',
-          headers: lanBody,
+          headers,
           body: JSON.stringify(lanBody),
           signal: controller.signal,
         });

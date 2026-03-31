@@ -14,9 +14,8 @@ import {
   NativeModules,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { requireNativeComponent } from 'react-native';
 const { Akuvox } = NativeModules;
-const VideoCallView = requireNativeComponent('VideoCallView');
+import VideoCallView from '../components/Native/VideoCallView';
 
 /**
  * Contacts now reflect SIP registration initiated in SmartScreen.
@@ -88,7 +87,7 @@ async function requestPermissionsIfNeeded() {
   return true;
 }
 
-export default function SdkContactScreen() {
+export default function SdkContactScreen({ navigation }) {
   const [sipStatus, setSipStatus] = useState(null);
   const [selectedContact, setSelectedContact] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -179,7 +178,13 @@ export default function SdkContactScreen() {
     const sipToCall = pickSipForContact(contact);
     Akuvox.makeCall(sipToCall, contact.name, 0); // 0 for audio call
     setModalVisible(false);
-    Alert.alert('Making Audio Call', `Calling ${contact.name} (${registeredTransport.toUpperCase()} SIP: ${sipToCall})`);
+    
+    // Immediately navigate to ActiveCallScreen in Outgoing mode
+    navigation.navigate('ActiveCallScreen', {
+      callId: 'dialing',
+      remoteName: contact.name,
+      isOutgoing: true
+    });
   };
 
   const handleMakeVideoCall = async (contact) => {
@@ -195,7 +200,13 @@ export default function SdkContactScreen() {
     const sipToCall = pickSipForContact(contact);
     Akuvox.makeCall(sipToCall, contact.name, 1); // 1 for video call
     setModalVisible(false);
-    Alert.alert('Making Video Call', `Calling ${contact.name} (video) — ${registeredTransport.toUpperCase()} SIP: ${sipToCall}`);
+
+    // Immediately navigate to ActiveCallScreen in Outgoing mode
+    navigation.navigate('ActiveCallScreen', {
+      callId: 'dialing',
+      remoteName: contact.name,
+      isOutgoing: true
+    });
   };
 
   // Accept/Reject Incoming Call
@@ -220,18 +231,19 @@ export default function SdkContactScreen() {
     return (
       <TouchableOpacity
         style={styles.contactItem}
+        activeOpacity={0.7}
         onPress={() => {
           setSelectedContact(item);
           setModalVisible(true);
         }}
       >
-        <View>
+        <View style={styles.contactAvatar}>
+          <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+        </View>
+        <View style={styles.contactInfo}>
           <Text style={styles.contactName}>{item.name}</Text>
           <Text style={styles.contactDetail}>
-            {item.type} · SIP (WAN: {item.sip_wan || '-'} · LAN: {item.sip_lan || '-'})
-          </Text>
-          <Text style={[styles.contactDetail, { marginTop: 6 }]}>
-            Active SIP: {registeredTransport ? activeSip : 'Register in Smart page'}
+            {item.type} {item.sip_lan ? `• LAN` : ''}
           </Text>
         </View>
       </TouchableOpacity>
@@ -352,7 +364,8 @@ export default function SdkContactScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderContactItem}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingBottom: 40, paddingTop: 10, paddingHorizontal: 16 }}
+        showsVerticalScrollIndicator={false}
       />
       {sipStatus !== null && (
         <Text style={styles.sipStatus}>SIP Status: {sipStatus}</Text>
@@ -366,21 +379,22 @@ export default function SdkContactScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f7fafc' },
+  safeArea: { flex: 1, backgroundColor: '#0d0d0d' }, // Ultra dark background
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#e2e8f0',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(20,20,20,0.8)',
     borderBottomWidth: 1,
-    borderColor: '#cbd5e0',
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#2d3748',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
   statusPill: {
     paddingHorizontal: 12,
@@ -392,124 +406,157 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   contactItem: {
-    padding: 16,
-    borderRadius: 10,
-    backgroundColor: '#edf2f7',
-    marginVertical: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    backgroundColor: '#1a1a1c', // Dark frosted row
+    marginVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  contactAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#32d2d6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  contactInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
   contactName: {
     fontSize: 18,
-    fontWeight: '500',
-    color: '#2b6cb0',
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 4,
   },
   contactDetail: {
     fontSize: 14,
-    color: '#718096',
-    marginTop: 2,
+    color: '#8e8e93',
+    fontWeight: '500',
   },
   separator: {
-    height: 8,
+    height: 1,
+    backgroundColor: 'transparent', 
   },
   sipStatus: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#38a169',
+    fontSize: 14,
+    color: '#34c759',
     textAlign: 'center',
+    fontWeight: '600',
   },
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(45, 55, 72, 0.5)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
     alignItems: 'center',
   },
   modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    width: '80%',
-    shadowColor: '#2d3748',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: '#1c1c1e',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 30,
+    width: '100%',
     alignItems: 'center',
+    borderTopWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#2b6cb0',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 24,
+    color: '#ffffff',
     textAlign: 'center',
   },
   modalButtons: {
     width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   actionBtn: {
-    width: '100%',
-    borderRadius: 10,
-    paddingVertical: 12,
+    flex: 1,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
+    marginHorizontal: 6,
   },
   actionText: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: '700',
     fontSize: 16,
   },
   incomingModalBg: {
     flex: 1,
-    backgroundColor: 'rgba(45, 55, 72, 0.5)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-start',
+    paddingTop: 60,
     alignItems: 'center',
   },
   incomingModalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#1c1c1e',
+    borderRadius: 24,
     padding: 32,
-    width: '80%',
+    width: '90%',
     alignItems: 'center',
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
   },
   incomingTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#2b6cb0',
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#ffffff',
     marginBottom: 8,
   },
   incomingFrom: {
     fontSize: 16,
-    color: '#718096',
-    marginBottom: 18,
+    color: '#a1a1aa',
+    marginBottom: 24,
   },
   incomingBtnRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
   },
   acceptBtn: {
-    backgroundColor: '#38a169',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 24,
+    flex: 1,
+    backgroundColor: '#34c759',
+    paddingVertical: 16,
+    borderRadius: 16,
     marginRight: 8,
+    alignItems: 'center',
   },
   acceptBtnText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
+    fontWeight: '800',
+    fontSize: 16,
   },
   rejectBtn: {
-    backgroundColor: '#c53030',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 24,
+    flex: 1,
+    backgroundColor: '#ff3b30',
+    paddingVertical: 16,
+    borderRadius: 16,
     marginLeft: 8,
+    alignItems: 'center',
   },
   rejectBtnText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
+    fontWeight: '800',
+    fontSize: 16,
   },
   videoCallOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -521,32 +568,36 @@ const styles = StyleSheet.create({
   remoteVideo: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#222',
+    backgroundColor: '#000',
   },
   localVideo: {
     position: 'absolute',
     width: 120,
     height: 160,
-    right: 16,
-    top: 16,
-    backgroundColor: '#444',
-    borderRadius: 8,
+    right: 20,
+    top: 60,
+    backgroundColor: '#111',
+    borderRadius: 12,
     overflow: 'hidden',
     zIndex: 101,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   endCallButton: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 50,
     alignSelf: 'center',
-    backgroundColor: '#c53030',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 24,
+    backgroundColor: '#ff3b30',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 102,
   },
   endCallText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 14,
   },
 });

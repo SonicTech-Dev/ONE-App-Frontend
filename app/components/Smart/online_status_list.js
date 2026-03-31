@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { buildLanHeaders } from './SmartScreenSections/LanAuth';
-import { buildWanHeaders } from './SmartScreenSections/WanAuth';
+// Legacy LanAuth import removed
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * DeviceListOnlineStatus
@@ -39,6 +39,7 @@ export default function DeviceListOnlineStatus({
   onStatuses = () => {},
   onLoadingChange = () => {},
 }) {
+  const { getActiveLanToken, getActiveWanToken } = useAuth();
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -62,9 +63,14 @@ export default function DeviceListOnlineStatus({
 
       try {
         if (selectedOption === 'WAN') {
+          const activeToken = await getActiveWanToken();
           const res = await fetch(wanBackendUrl, {
             method: 'POST',
-            headers: await buildWanHeaders(),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${activeToken}`
+            },
             body: JSON.stringify(wanBody),
             signal: controller.signal,
           });
@@ -85,39 +91,11 @@ export default function DeviceListOnlineStatus({
         }
 
         // LAN path
-        let rawHeaders = {};
-        try {
-          rawHeaders = await buildLanHeaders();
-        } catch (e) {
-          console.warn('[DeviceListOnlineStatus] buildLanHeaders failed.', e);
-          if (mounted) onStatuses({});
-          return;
-        }
-
-        const possibleToken =
-          rawHeaders.Authorization ??
-          rawHeaders.token ??
-          rawHeaders.authToken ??
-          null;
-
-        const Authorization =
-          rawHeaders.Authorization && rawHeaders.Authorization.startsWith('Bearer ')
-            ? rawHeaders.Authorization
-            : possibleToken
-            ? possibleToken.startsWith('Bearer ')
-              ? possibleToken
-              : `Bearer ${possibleToken}`
-            : undefined;
-
+        const activeToken = await getActiveLanToken();
         const headers = {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...(Authorization ? { Authorization } : {}),
-          ...Object.fromEntries(
-            Object.entries(rawHeaders).filter(
-              ([k]) => !['Authorization', 'token', 'authToken'].includes(k)
-            )
-          ),
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${activeToken}`
         };
 
         if (!headers.Authorization) {

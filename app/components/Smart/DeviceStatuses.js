@@ -29,36 +29,45 @@ const DeviceStatuses = () => {
       />
 
       <ScrollViewWrapper>
+        <HeaderTitle>Device Status</HeaderTitle>
         {INITIAL_DEVICE_CATEGORIES.map((category, categoryIndex) => (
           <CategoryContainer key={categoryIndex}>
             <CategoryHeader>{category.category}</CategoryHeader>
+            <DeviceGroup>
+              {category.items.map((device, deviceIndex) => {
+                const deviceId =
+                  selectedOption === 'WAN'
+                    ? device?.wan?.device_id
+                    : device?.lan?.device_id;
 
-            {category.items.map((device, deviceIndex) => {
-              const deviceId =
-                selectedOption === 'WAN'
-                  ? device?.wan?.device_id
-                  : device?.lan?.device_id;
+                const hasStatus = typeof statusMap[deviceId] === 'boolean';
+                const isOnline = hasStatus ? statusMap[deviceId] : false;
+                const isLast = deviceIndex === category.items.length - 1;
 
-              const hasStatus = typeof statusMap[deviceId] === 'boolean';
-              const isOnline = hasStatus ? statusMap[deviceId] : false;
+                return (
+                  <DeviceRow key={deviceIndex} isLast={isLast}>
+                    <DeviceInfo>
+                      <DeviceName>{device.title}</DeviceName>
+                      <DeviceLocation>{device.location}</DeviceLocation>
+                    </DeviceInfo>
 
-              return (
-                <DeviceRow key={deviceIndex}>
-                  <DeviceInfo>
-                    <DeviceName>{device.title}</DeviceName>
-                    <DeviceLocation>{device.location}</DeviceLocation>
-                  </DeviceInfo>
-
-                  {loading && !hasStatus ? (
-                    <CheckingText>Checking...</CheckingText>
-                  ) : (
-                    <StatusText isOnline={!!isOnline}>
-                      {isOnline ? 'Online' : 'Offline'}
-                    </StatusText>
-                  )}
-                </DeviceRow>
-              );
-            })}
+                    {loading && !hasStatus ? (
+                      <StatusPill color="#4a5568">
+                        <StatusInnerDot color="#a0aec0" />
+                        <PillText>Checking</PillText>
+                      </StatusPill>
+                    ) : (
+                      <StatusPill color={isOnline ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 59, 48, 0.15)'}>
+                        <StatusInnerDot color={isOnline ? '#34c759' : '#ff3b30'} />
+                        <PillText color={isOnline ? '#248a3d' : '#bd2a22'}>
+                          {isOnline ? 'Online' : 'Offline'}
+                        </PillText>
+                      </StatusPill>
+                    )}
+                  </DeviceRow>
+                );
+              })}
+            </DeviceGroup>
           </CategoryContainer>
         ))}
       </ScrollViewWrapper>
@@ -71,28 +80,45 @@ export default DeviceStatuses;
 // Styled Components
 const ScrollViewWrapper = styled.ScrollView`
   flex: 1;
-  background-color: #f9f9f9;
+  background-color: #f2f2f7; /* iOS System Gray 6 */
+`;
+
+const HeaderTitle = styled.Text`
+  font-size: 34px;
+  font-weight: 800;
+  color: #000;
+  margin: 20px 20px 10px 20px;
 `;
 
 const CategoryContainer = styled.View`
-  margin-bottom: 80px;
+  margin-bottom: 24px;
   padding: 0 16px;
 `;
 
 const CategoryHeader = styled.Text`
-  font-size: 20px;
-  font-weight: bold;
-  color: #2d3748;
-  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #8e8e93;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  margin-left: 16px;
+  letter-spacing: 0.5px;
+`;
+
+const DeviceGroup = styled.View`
+  background-color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
 `;
 
 const DeviceRow = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
-  border-bottom-width: 1px;
-  border-bottom-color: #ddd;
+  padding: 16px;
+  background-color: #ffffff;
+  border-bottom-width: ${(props) => (props.isLast ? '0px' : '0.5px')};
+  border-bottom-color: #c6c6c8;
 `;
 
 const DeviceInfo = styled.View`
@@ -100,24 +126,36 @@ const DeviceInfo = styled.View`
 `;
 
 const DeviceName = styled.Text`
-  font-size: 16px;
-  font-weight: bold;
-  color: #2d3748;
+  font-size: 17px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 2px;
 `;
 
 const DeviceLocation = styled.Text`
-  font-size: 14px;
-  color: #777;
+  font-size: 13px;
+  color: #8e8e93;
+  font-weight: 500;
 `;
 
-const StatusText = styled.Text`
-  font-size: 16px;
-  font-weight: bold;
-  color: ${(props) => (props.isOnline ? 'green' : 'red')};
-  margin-left: 16px;
+const StatusPill = styled.View`
+  flex-direction: row;
+  align-items: center;
+  background-color: ${(props) => props.color};
+  padding: 6px 12px;
+  border-radius: 14px;
 `;
 
-const CheckingText = styled.Text`
-  margin-left: 16px;
-  color: #777;
+const StatusInnerDot = styled.View`
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: ${(props) => props.color};
+  margin-right: 6px;
 `;
+
+const PillText = styled.Text`
+  font-size: 13px;
+  font-weight: 700;
+  color: ${(props) => props.color || '#fff'};
+`;

@@ -1,0 +1,204 @@
+import React, { useEffect, useState, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, Dimensions, NativeModules, NativeEventEmitter, Animated } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import VideoCallView from '../components/Native/VideoCallView';
+
+const { width, height } = Dimensions.get('window');
+const { AkuvoxModule } = NativeModules;
+const eventEmitter = new NativeEventEmitter(AkuvoxModule);
+
+export default function ActiveCallScreen({ route, navigation }) {
+  const { callId, remoteName, isOutgoing } = route.params || {};
+  const [activeCallId, setActiveCallId] = useState(callId === 'dialing' ? null : callId);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Pulse animation for dialing
+  useEffect(() => {
+    if (!activeCallId && isOutgoing) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.2, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true })
+        ])
+      ).start();
+    }
+  }, [activeCallId, isOutgoing]);
+
+  useEffect(() => {
+    // Listen for connection
+    const callEstablishedSub = eventEmitter.addListener('onCallEstablished', (data) => {
+      if (isOutgoing) {
+        setActiveCallId(data.callId); // Call connected!
+      }
+    });
+
+    // Listen for call finished event to auto-close the screen
+    const callFinishedSub = eventEmitter.addListener('onCallFinished', (data) => {
+      if (data.callId === activeCallId || data.callId === callId || !activeCallId) {
+        navigation.goBack();
+      }
+    });
+
+    return () => {
+      callEstablishedSub.remove();
+      callFinishedSub.remove();
+    };
+  }, [activeCallId, callId, navigation, isOutgoing]);
+
+  const handleHangup = () => {
+    if (activeCallId) {
+      AkuvoxModule.hangupCall(activeCallId);
+    } else {
+      AkuvoxModule.hangupCall(0); // Optional: hangup generic logic for canceling dialing
+    }
+    navigation.goBack();
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Remote Video Stream Fullscreen */}
+      {activeCallId ? (
+        <VideoCallView type="remote" callId={activeCallId} style={styles.remoteVideo} />
+      ) : (
+        <View style={styles.dialingContainer}>
+          <Animated.View style={[styles.avatarGlow, { transform: [{ scale: pulseAnim }] }]} />
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={50} color="#fff" />
+          </View>
+          <Text style={styles.dialingText}>Dialing...</Text>
+        </View>
+      )}
+
+      {/* Picture-in-Picture Local Video */}
+      {activeCallId && (
+        <View style={styles.pipContainer}>
+          <VideoCallView type="local" callId={activeCallId} style={styles.localVideo} />
+        </View>
+      )}
+
+      {/* Top Caller Info */}
+      <View style={styles.header}>
+        <Text style={styles.callerName}>{remoteName || 'Unknown Caller'}</Text>
+        <Text style={styles.durationText}>{activeCallId ? '00:00' : 'Calling'}</Text>
+      </View>
+
+      {/* Floating Control Bar */}
+      <View style={styles.controlsContainer}>
+        <TouchableOpacity style={styles.controlButton}>
+          <Ionicons name="mic-off" size={28} color="#ffffff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.controlButton, styles.hangupButton]} onPress={handleHangup}>
+          <Ionicons name="call" size={32} color="#ffffff" style={{ transform: [{ rotate: '135deg' }] }} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.controlButton}>
+          <Ionicons name="volume-high" size={28} color="#ffffff" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  remoteVideo: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  pipContainer: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    width: 100,
+    height: 150,
+    borderRadius: 12,
+    backgroundColor: '#222',
+    overflow: 'hidden',
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderWidth: 1,
+  },
+  localVideo: {
+    flex: 1,
+  },
+  header: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 140, // avoid pip
+  },
+  callerName: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  durationText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 16,
+    marginTop: 4,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  controlsContainer: {
+    position: 'absolute',
+    bottom: 50,
+    left: 40,
+    right: 40,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingVertical: 16,
+    borderRadius: 40,
+  },
+  controlButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hangupButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#ff3b30',
+  },
+  dialingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#111',
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#32d2d6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  avatarGlow: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(50, 210, 214, 0.4)',
+    zIndex: 1,
+  },
+  dialingText: {
+    marginTop: 30,
+    fontSize: 22,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '600',
+    letterSpacing: 2,
+  }
+});

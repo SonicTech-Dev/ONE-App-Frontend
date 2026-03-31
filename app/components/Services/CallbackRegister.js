@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { buildLanHeaders } from '../Smart/SmartScreenSections/LanAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function CallbackRegistration({
   deviceCallbackUrl, // e.g. http://192.168.2.115/api/v1.0/callback
@@ -9,6 +9,7 @@ export default function CallbackRegistration({
   run,
   onStatus,          // function(status: 'success' | 'error', data?: any)
 }) {
+  const { getActiveLanToken } = useAuth();
   const [lanHeaders, setLanHeaders] = useState(null);
 
   // Build LAN headers once
@@ -16,7 +17,8 @@ export default function CallbackRegistration({
     let mounted = true;
     (async () => {
       try {
-        const headers = await buildLanHeaders();
+        const token = await getActiveLanToken();
+        const headers = { 'Authorization': `Bearer ${token}` };
         if (mounted) setLanHeaders(headers || null);
         console.log('[CallbackRegistration] Built LAN headers:', headers);
       } catch (err) {

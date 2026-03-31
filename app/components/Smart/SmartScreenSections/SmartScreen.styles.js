@@ -33,5 +33,43 @@ export default StyleSheet.create({
     flex: 1,
     minWidth: 0,
     maxWidth: '100%',
+  },
+  // Apple Control Center Quick Action Dock
+  actionDockContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    backgroundColor: '#1c1c1e', // frosted dark grey
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  actionButtonWrapper: {
+    alignItems: 'center',
+    width: 60,
+  },
+  actionButtonIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  actionButtonLabel: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.3,
   }
 });

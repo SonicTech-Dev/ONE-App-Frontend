@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View, TouchableOpacity, Text } from 'react-native';
+
 import DeviceTile from '../DeviceTile';
 import styles from './SmartScreen.styles';
 
@@ -15,69 +16,6 @@ export default function DeviceGrid({
 }) {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer} scrollEventThrottle={16}>
-      {/* Only show SDK Test Tiles when "All Devices" tab is active */}
-      {activeTab === 'All Devices' && (
-        <>
-          <View style={styles.sdkTestTileRow}>
-            <DeviceTile
-              title="Contacts"
-              location="Contact Page"
-              status=""
-              color="#cfd88bff"
-              isOn={false}
-              iconName="contact-page"
-              library="MaterialIcons"
-              onPress={() => navigation.navigate('SdkTest')}
-              disabled={false}
-            />
-          </View>
-          <View style={styles.sdkTestTileRow}>
-            <DeviceTile
-              title="Smart Lock Screen"
-              location="Entrance"
-              status=""
-              color="#629a8aff"
-              isOn={false}
-              iconName="door-sliding"
-              library="MaterialIcons"
-              onPress={() => navigation.navigate('SmartLockScreen')}
-              disabled={false}
-            />
-          </View>
-          <View style={styles.sdkTestTileRow}>
-            <DeviceTile
-              title="IntercomScreen"
-              location="Entrance"
-              status=""
-              color="#7b888fff"
-              isOn={false}
-              iconName="sensor-door"
-              library="MaterialIcons"
-              onPress={() => navigation.navigate('IntercomScreen', {
-                    selectedOption,           // 'LAN' or 'WAN'
-                    deviceId: '0C11052C6E92',
-                    lanRtspUrl: 'rtsp://admin:Sonic123@192.168.2.114:',
-                    wanRtspUrl: 'rtsp://user:J19IE753w25867v6@35.156.199.213:554/0C11052C6E92',
-                    LAN_HEADERS: lanHeaders
-                    })}
-              disabled={false} />
-          </View>
-          <View style={styles.sdkTestTileRow}>
-            <DeviceTile
-              title="IP Camera Screen"
-              location="Entrance"
-              status=""
-              color="#7b888fff"
-              isOn={false}
-              iconName="sensor-door"
-              library="MaterialIcons"
-              onPress={() => navigation.navigate('IPCameraScreen', {
-                    selectedOption,           // 'LAN' or 'WAN'
-                    })}
-              disabled={false} />
-          </View>
-        </>
-      )}
       {/* Device Tiles */}
       {filteredDevices
         .reduce((result, device, index) => {

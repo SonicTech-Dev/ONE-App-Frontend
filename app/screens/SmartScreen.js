@@ -12,8 +12,7 @@ import { INITIAL_DEVICE_CATEGORIES } from '../components/Smart/SmartScreenSectio
 import { controlDevice, deviceStatus } from '../components/Smart/SmartScreenSections/api';
 import styles from '../components/Smart/SmartScreenSections/SmartScreen.styles';
 import DeviceGrid from '../components/Smart/SmartScreenSections/DeviceGrid';
-import { buildLanHeaders } from '../components/Smart/SmartScreenSections/LanAuth';
-import { buildWanHeaders } from '../components/Smart/SmartScreenSections/WanAuth';
+import { useAuth } from '../context/AuthContext';
 import CallbackRegistration from '../components/Services/CallbackRegister';
 import { NetworkInfo } from 'react-native-network-info';
 
@@ -43,6 +42,17 @@ async function requestPermissionsIfNeeded() {
 const ipv4Regex = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
 
 export default function SmartScreen({ navigation }) {
+  const { getActiveLanToken, getActiveWanToken } = useAuth();
+  
+  const getHeaders = async () => {
+    const activeToken = selectedOption === 'LAN' ? await getActiveLanToken() : await getActiveWanToken();
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${activeToken}`
+    };
+  };
+
   const [selectedOption, setSelectedOption] = useState('LAN');
   const [deviceCategories, setDeviceCategories] = useState(INITIAL_DEVICE_CATEGORIES);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -202,7 +212,7 @@ export default function SmartScreen({ navigation }) {
         return;
       }
       (async () => {
-        const headers = selectedOption === 'LAN' ? await buildLanHeaders() : await buildWanHeaders();
+        const headers = await getHeaders();
         deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, headers);
       })();
     } else {
@@ -229,7 +239,7 @@ export default function SmartScreen({ navigation }) {
       }))
     );
     const command = dev.commandPair[newControl];
-    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : await buildWanHeaders();
+    const headers = await getHeaders();
     controlDevice(dev.device_id, dev.ability_id, command, null, selectedOption, headers);
     deviceStatus(dev.device_id, selectedOption, setSelectedDeviceStatus, headers);
   };
@@ -245,7 +255,7 @@ export default function SmartScreen({ navigation }) {
     const attribute = mode === 'lan'
       ? { position }
       : { position_percent: position };
-    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : await buildWanHeaders();
+    const headers = await getHeaders();
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -260,7 +270,7 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { preset_temperature: temperature };
     const command = dev.commandPair['on'];
-    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : await buildWanHeaders();
+    const headers = await getHeaders();
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -275,7 +285,7 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { hvac_mode: HVACmode };
     const command = dev.commandPair['on'];
-    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : await buildWanHeaders();
+    const headers = await getHeaders();
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -290,7 +300,7 @@ export default function SmartScreen({ navigation }) {
       ? { target_temperature: temperature }
       : { fan_mode: speed };
     const command = dev.commandPair['on'];
-    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : await buildWanHeaders();
+    const headers = await getHeaders();
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 
@@ -305,7 +315,7 @@ export default function SmartScreen({ navigation }) {
       ? { brightness_pct: Brightness }
       : { brightness: Brightness };
     const command = dev.commandPair['on'];
-    const headers = selectedOption === 'LAN' ? await buildLanHeaders() : await buildWanHeaders();
+    const headers = await getHeaders();
     controlDevice(dev.device_id, dev.ability_id, command, attribute, selectedOption, headers);
   };
 

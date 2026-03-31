@@ -4,6 +4,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import WelcomeScreen from "../screens/WelcomeScreen";
 import AppNavigator from "./AppNavigator";
+import ActiveCallScreen from "../screens/ActiveCallScreen";
 
 const Stack = createStackNavigator();
 
@@ -23,6 +24,11 @@ return(
         />
 
 <Stack.Screen name="AppNavigator" component={AppNavigator} />
+<Stack.Screen 
+      name="ActiveCallScreen" 
+      component={ActiveCallScreen} 
+      options={{ headerShown: false, presentation: 'fullScreenModal' }} 
+/>
 
     </Stack.Navigator>
 )}
