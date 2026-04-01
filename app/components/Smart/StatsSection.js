@@ -14,7 +14,7 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
   const navigation = useNavigation();
   return (
     <>
-      <View style={[styles.actionDockContainer, { marginTop: 16 }]}>
+      <View style={[styles.actionDockContainer, { marginTop: 8 }]}>
         {/* Contacts */}
         <TouchableOpacity 
           style={styles.actionButtonWrapper} 
