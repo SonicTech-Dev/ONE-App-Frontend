@@ -4,8 +4,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import VideoCallView from '../components/Native/VideoCallView';
 
 const { width, height } = Dimensions.get('window');
-const { AkuvoxModule } = NativeModules;
-const eventEmitter = new NativeEventEmitter(AkuvoxModule);
+const { Akuvox } = NativeModules;
+const eventEmitter = new NativeEventEmitter(Akuvox);
 
 export default function ActiveCallScreen({ route, navigation }) {
   const { callId, remoteName, isOutgoing } = route.params || {};
@@ -47,9 +47,9 @@ export default function ActiveCallScreen({ route, navigation }) {
 
   const handleHangup = () => {
     if (activeCallId) {
-      AkuvoxModule.hangupCall(activeCallId);
+      Akuvox.hangupCall(activeCallId);
     } else {
-      AkuvoxModule.hangupCall(0); // Optional: hangup generic logic for canceling dialing
+      Akuvox.hangupCall(0); // Optional: hangup generic logic for canceling dialing
     }
     navigation.goBack();
   };
