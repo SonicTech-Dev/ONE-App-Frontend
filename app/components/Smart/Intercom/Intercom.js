@@ -4,12 +4,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Alert,
   Dimensions,
 } from 'react-native';
 import RTSPViewer from './RTSPViewer';
 import { buildLanHeaders } from '../SmartScreenSections/LanAuth';
+import Screen from '../../Screen';
 
 const FALLBACK_LAN_RTSP_URL = 'rtsp://admin:Sonic123@192.168.2.114:554/';
 const FALLBACK_WAN_RTSP_URL = 'rtsp://user:J19IE753w25867v6@35.156.199.213:554/0C11052C6E92';
@@ -126,79 +126,134 @@ export default function Intercom({ route }) {
   const playerHeight = Math.round((width * 9) / 16); // 16:9 player
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Intercom</Text>
-        <View style={styles.modeChip}>
-          <Text style={styles.modeChipText}>Mode: {selectedOption}</Text>
-        </View>
-      </View>
-
-      {/* Camera view */}
-      <View style={styles.content}>
-        <View style={[styles.playerContainer, { height: playerHeight }]}>
-          <RTSPViewer uri={uri} style={styles.player} />
+    <Screen style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.topRow}>
+          <View style={styles.contextChip}>
+            <Text style={styles.contextChipText}>Entrance Panel</Text>
+          </View>
+          <View style={[styles.contextChip, styles.modeChip]}>
+            <Text style={styles.modeChipText}>{selectedOption}</Text>
+          </View>
         </View>
 
-        {/* Unlock button */}
-        <View style={styles.controls}>
-          <TouchableOpacity
-            style={[styles.button, styles.buttonPrimary]}
-            onPress={onPressUnlockDoor}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.buttonText}>Unock Door</Text>
-          </TouchableOpacity>
+        <View style={styles.contentCard}>
+          <Text style={styles.cardTitle}>Live Intercom Feed</Text>
+          <Text style={styles.cardSubtitle}>View the entrance stream and open the door remotely.</Text>
+
+          <View style={[styles.playerContainer, { height: playerHeight }]}>
+            <RTSPViewer uri={uri} style={styles.player} />
+            <View style={styles.liveBadge}>
+              <Text style={styles.liveBadgeText}>LIVE</Text>
+            </View>
+          </View>
+
+          <View style={styles.controls}>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonPrimary]}
+              onPress={onPressUnlockDoor}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.buttonText}>Unlock Door</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0b132b' },
-  header: {
+  safeArea: { flex: 1, backgroundColor: '#f8f9fc' },
+  container: {
+    flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#1c2541',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#2d3a5f',
+    paddingTop: 18,
+    paddingBottom: 14,
   },
-  title: { color: '#fff', fontSize: 20, fontWeight: '700' },
-  modeChip: {
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  contextChip: {
     alignSelf: 'flex-start',
-    marginTop: 8,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#2d3a5f',
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#1c1c1e',
   },
-  modeChipText: { color: '#cde7f2', fontSize: 12, fontWeight: '600' },
-
-  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
+  contextChipText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  modeChip: {
+    backgroundColor: '#eaf2ff',
+  },
+  modeChipText: {
+    color: '#325ea8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  contentCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 14,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  cardTitle: {
+    color: '#263650',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    color: '#6c7a90',
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  content: { flex: 1 },
   playerContainer: {
     width: '100%',
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#000',
   },
+  liveBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  liveBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
   player: { width: '100%', height: '100%' },
-
   controls: {
-    marginTop: 16,
-    paddingVertical: 16,
+    marginTop: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   button: {
-    minWidth: 200,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 24,
+    width: '100%',
+    paddingVertical: 13,
+    borderRadius: 12,
   },
   buttonPrimary: {
-    backgroundColor: '#5bc0be',
+    backgroundColor: '#0f766e',
   },
-  buttonText: { color: '#0b132b', fontWeight: '700', fontSize: 16, textAlign: 'center' },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: 15, textAlign: 'center' },
 });

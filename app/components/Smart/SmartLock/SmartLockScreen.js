@@ -12,6 +12,8 @@ import {
   UIManager,
   Platform,
 } from 'react-native';
+import Screen from '../../Screen';
+import useColors from '../../../hooks/useColors';
 
 const { Akuvox } = NativeModules;
 
@@ -37,6 +39,8 @@ function checkMethod(name) {
 }
 
 export default function SmartLockScreen() {
+  const colors = useColors();
+
   // Device config
   const residenceId = 'r45844047053e43d78fe5272c5badbd3a';
   const userId = 'a9b41de81c3284515a5e833d53412fe14';
@@ -82,11 +86,14 @@ export default function SmartLockScreen() {
   }
 
   const handleUnlock = () => {
-    checkMethod('unlockViaLAN');
-    Akuvox.unlockViaLAN(deviceId, (success) => {
-      setUnlockStatus(success ? 'Unlocked!' : 'Unlock failed');
-      Alert.alert(success ? 'Door unlocked' : 'Unlock failed');
-    });
+    safeCall(
+      'unlockViaLAN',
+      [deviceId, (success) => {
+        setUnlockStatus(success ? 'Unlocked' : 'Unlock failed');
+        Alert.alert(success ? 'Door unlocked' : 'Unlock failed');
+      }],
+      'Failed to trigger door unlock'
+    );
   };
 
   useEffect(() => {
@@ -157,9 +164,9 @@ export default function SmartLockScreen() {
   const renderVideoArea = () => {
     if (isMonitoring && monitorId && monitorId > 0) {
       return (
-        <View style={styles.videoContainer}>
+        <View style={[styles.videoContainer, { backgroundColor: colors.dark }] }>
           <SmartLockMonitorView style={styles.nativeVideo} monitorId={monitorId} />
-          <Text style={styles.monitorType}>LAN Monitoring (SDK)</Text>
+          <Text style={styles.monitorType}>LAN Monitoring</Text>
           {videoError ? <Text style={styles.videoError}>{videoError}</Text> : null}
         </View>
       );
@@ -175,48 +182,136 @@ export default function SmartLockScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.title}>SL50 Smart Lock</Text>
-      <View style={styles.lockCard}>
-        <Text style={styles.lockCardTitle}>Unlock Your Door</Text>
-        <TouchableOpacity style={styles.unlockButton} onPress={handleUnlock} activeOpacity={0.7}>
-          <Text style={styles.unlockButtonText}>Unlock</Text>
-        </TouchableOpacity>
-        {unlockStatus && <Text style={styles.status}>{unlockStatus}</Text>}
-      </View>
-      {renderVideoArea()}
-      <View style={{ height: 35 }} />
-    </ScrollView>
+    <Screen style={{ backgroundColor: '#f8f9fc' }}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.metaRow}>
+          <View style={styles.metaChip}>
+            <Text style={styles.metaText}>Smart Lock</Text>
+          </View>
+          <View style={[styles.metaChip, styles.metaChipSoft]}>
+            <Text style={styles.metaTextSoft}>{isMonitoring ? 'Live' : 'Standby'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.lockCard}>
+          <Text style={styles.lockCardTitle}>Entrance Door</Text>
+          <Text style={styles.lockSubtitle}>Control access and monitor the live lock camera feed.</Text>
+          <TouchableOpacity style={styles.unlockButton} onPress={handleUnlock} activeOpacity={0.85}>
+            <Text style={styles.unlockButtonText}>Unlock</Text>
+          </TouchableOpacity>
+          {unlockStatus ? (
+            <View style={[styles.statusBadge, unlockStatus === 'Unlocked' ? styles.statusSuccess : styles.statusError]}>
+              <Text style={styles.statusText}>{unlockStatus}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {renderVideoArea()}
+        <View style={{ height: 24 }} />
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f3f6fb' },
-  scrollContent: { padding: 24, alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: '700', color: '#2d3748', marginBottom: 16, letterSpacing: 1, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: '#f8f9fc' },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 12 },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  metaChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#1c1c1e',
+  },
+  metaChipSoft: {
+    backgroundColor: '#eef1f6',
+  },
+  metaText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  metaTextSoft: {
+    color: '#44536a',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
   lockCard: {
-    width: '98%', maxWidth: 420, backgroundColor: '#fff', borderRadius: 20, padding: 22, marginBottom: 30,
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 10, elevation: 4, alignItems: 'center',
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  lockCardTitle: { fontSize: 20, fontWeight: '600', color: '#3182ce', marginBottom: 14, letterSpacing: 0.5 },
+  lockCardTitle: { fontSize: 18, fontWeight: '700', color: '#25344d', marginBottom: 6 },
+  lockSubtitle: { fontSize: 13, color: '#6c7a90', marginBottom: 16, lineHeight: 19 },
   unlockButton: {
-    width: 140, backgroundColor: '#38a169', paddingVertical: 14, borderRadius: 12, alignItems: 'center',
-    marginVertical: 8, shadowColor: '#38a169', shadowOpacity: 0.18, shadowRadius: 8, elevation: 3,
+    width: '100%',
+    backgroundColor: '#1f8a70',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  unlockButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18, letterSpacing: 1 },
-  status: { fontSize: 18, color: '#38a169', marginTop: 12, fontWeight: '600', letterSpacing: 0.5 },
+  unlockButtonText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.4 },
+  statusBadge: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  statusSuccess: {
+    backgroundColor: '#dff7ec',
+  },
+  statusError: {
+    backgroundColor: '#fbe4e4',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1f513f',
+  },
   videoContainer: {
-    width: '98%', maxWidth: 420, aspectRatio: 1.6,
-    // borderRadius: 16,
-    // overflow: 'hidden',
-    backgroundColor: '#222',
-    marginTop: 4,
-    marginBottom: 24,
+    width: '100%',
+    aspectRatio: 1.58,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginTop: 2,
+    marginBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 5,
+    elevation: 3,
   },
   nativeVideo: { flex: 1, width: '100%', minHeight: 220, backgroundColor: '#111' },
-  monitorType: { color: '#fff', fontWeight: 'bold', marginTop: 12, fontSize: 16, letterSpacing: 1 },
-  videoError: { color: '#c53030', fontWeight: 'bold', marginTop: 12, fontSize: 16, letterSpacing: 1, textAlign: 'center' },
+  monitorType: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 11,
+    backgroundColor: 'rgba(0,0,0,0.48)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  videoError: {
+    color: '#fca5a5',
+    fontWeight: '700',
+    marginTop: 12,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+  },
 });

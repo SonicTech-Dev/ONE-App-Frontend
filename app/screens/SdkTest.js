@@ -10,12 +10,11 @@ import {
   Modal,
   PermissionsAndroid,
   Platform,
-  NativeEventEmitter,
   NativeModules,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const { Akuvox } = NativeModules;
-import VideoCallView from '../components/Native/VideoCallView';
 
 /**
  * Contacts now reflect SIP registration initiated in SmartScreen.
@@ -50,6 +49,7 @@ const getContacts = () => {
       name: device.device_name,
       sip_wan: device.sip_wan,
       sip_lan: device.sip_lan,
+      sip_group: apiResult.sip_group,
       type: 'Device',
     });
   });
@@ -59,6 +59,8 @@ const getContacts = () => {
       name: `${account.first_name} ${account.last_name}`,
       sip_wan: account.sip_wan,
       sip_lan: account.sip_lan,
+      main_sip: account.main_sip,
+      sip_group: apiResult.sip_group,
       type: 'Account',
     });
   });
@@ -68,6 +70,7 @@ const getContacts = () => {
       name: dev.device_name,
       sip_wan: dev.sip_wan,
       sip_lan: dev.sip_lan,
+      sip_group: apiResult.sip_group,
       type: 'Akuvox Device',
     });
   });
@@ -91,51 +94,29 @@ export default function SdkContactScreen({ navigation }) {
   const [sipStatus, setSipStatus] = useState(null);
   const [selectedContact, setSelectedContact] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [showVideoCall, setShowVideoCall] = useState(false);
-  const [currentCallId, setCurrentCallId] = useState(null); // Only set after SIP event
-  const [incomingCall, setIncomingCall] = useState(null); // {callId, from}
   const [registeredTransport, setRegisteredTransport] = useState(null); // 'wan' | 'lan' | null
 
   const contacts = getContacts();
 
-  // Load chosen transport from SmartScreen
-  useEffect(() => {
-    const loadTransport = async () => {
-      try {
-        const t = await AsyncStorage.getItem('registeredTransport');
-        if (t === 'lan' || t === 'wan') {
-          setRegisteredTransport(t);
-        } else {
-          setRegisteredTransport(null);
-        }
-      } catch (e) {
-        console.warn('[Contacts] Failed to load registeredTransport:', e);
+  const loadTransport = async () => {
+    try {
+      const t = await AsyncStorage.getItem('registeredTransport');
+      if (t === 'lan' || t === 'wan') {
+        setRegisteredTransport(t);
+      } else {
+        setRegisteredTransport(null);
       }
-    };
-    loadTransport();
-  }, []);
+    } catch (e) {
+      console.warn('[Contacts] Failed to load registeredTransport:', e);
+    }
+  };
 
-  // Listen for SIP call established event
-  useEffect(() => {
-    const eventEmitter = new NativeEventEmitter(Akuvox);
-    const sub = eventEmitter.addListener('onCallEstablished', (params) => {
-      setCurrentCallId(params.callId);
-      setShowVideoCall(true);
-      setIncomingCall(null); // hide incoming call UI if it was displayed
-    });
-    return () => sub.remove();
-  }, []);
-
-  // Listen for SIP incoming call event
-  useEffect(() => {
-    const eventEmitter = new NativeEventEmitter(Akuvox);
-    const incomingCallSub = eventEmitter.addListener('onIncomingCall', (params) => {
-      setIncomingCall(params);
-      setShowVideoCall(false); // do not show video UI until accepted
-      setCurrentCallId(params.callId); // keep callId ready for accept/reject
-    });
-    return () => incomingCallSub.remove();
-  }, []);
+  // Keep transport synced when this screen regains focus (after user switches LAN/WAN in SmartScreen).
+  useFocusEffect(
+    React.useCallback(() => {
+      loadTransport();
+    }, [])
+  );
 
   // Optionally poll or fetch SIP status to show user feedback
   useEffect(() => {
@@ -150,18 +131,53 @@ export default function SdkContactScreen({ navigation }) {
     fetchStatus();
   }, []);
 
-  // Utility to pick the right SIP id for contact based on current registration transport
-  const pickSipForContact = (contact) => {
-    if (!contact) return null;
+  const uniqueSipTargets = (items) => {
+    const seen = new Set();
+    const result = [];
+
+    items.forEach((item) => {
+      const value = typeof item === 'string' || typeof item === 'number' ? String(item).trim() : '';
+      if (!value || seen.has(value)) {
+        return;
+      }
+      seen.add(value);
+      result.push(value);
+    });
+
+    return result;
+  };
+
+  // Build ordered SIP candidates for resilient dialing.
+  const getSipCandidatesForContact = (contact) => {
+    if (!contact) return [];
+
     if (registeredTransport === 'lan') {
-      // prefer sip_lan, fall back to sip_wan or generic sip if present
-      return contact.sip_lan || contact.sip_wan || contact.sip;
-    } else if (registeredTransport === 'wan') {
-      return contact.sip_wan || contact.sip_lan || contact.sip;
-    } else {
-      // not registered: prefer wan by default but will prompt user to register
-      return contact.sip_wan || contact.sip_lan || contact.sip;
+      return uniqueSipTargets([
+        contact.sip_lan,
+        contact.sip_wan,
+        contact.main_sip,
+        contact.sip_group,
+        contact.sip,
+      ]);
     }
+
+    if (registeredTransport === 'wan') {
+      return uniqueSipTargets([
+        contact.main_sip,
+        contact.sip_wan,
+        contact.sip_lan,
+        contact.sip_group,
+        contact.sip,
+      ]);
+    }
+
+    return uniqueSipTargets([
+      contact.main_sip,
+      contact.sip_wan,
+      contact.sip_lan,
+      contact.sip_group,
+      contact.sip,
+    ]);
   };
 
   // Contact Call Actions
@@ -175,7 +191,19 @@ export default function SdkContactScreen({ navigation }) {
       Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
       return;
     }
-    const sipToCall = pickSipForContact(contact);
+    const sipCandidates = getSipCandidatesForContact(contact);
+    const sipToCall = sipCandidates[0];
+    if (!sipToCall) {
+      Alert.alert('Missing SIP', `No valid SIP target found for ${contact?.name || 'contact'}.`);
+      return;
+    }
+
+    console.log('[Contacts] Audio call target:', {
+      transport: registeredTransport,
+      sipToCall,
+      sipCandidates,
+      contact: contact?.name,
+    });
     Akuvox.makeCall(sipToCall, contact.name, 0); // 0 for audio call
     setModalVisible(false);
     
@@ -183,7 +211,10 @@ export default function SdkContactScreen({ navigation }) {
     navigation.navigate('ActiveCallScreen', {
       callId: 'dialing',
       remoteName: contact.name,
-      isOutgoing: true
+      isOutgoing: true,
+      dialTargets: sipCandidates,
+      dialTargetIndex: 0,
+      callVideoMode: 0,
     });
   };
 
@@ -197,7 +228,19 @@ export default function SdkContactScreen({ navigation }) {
       Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
       return;
     }
-    const sipToCall = pickSipForContact(contact);
+    const sipCandidates = getSipCandidatesForContact(contact);
+    const sipToCall = sipCandidates[0];
+    if (!sipToCall) {
+      Alert.alert('Missing SIP', `No valid SIP target found for ${contact?.name || 'contact'}.`);
+      return;
+    }
+
+    console.log('[Contacts] Video call target:', {
+      transport: registeredTransport,
+      sipToCall,
+      sipCandidates,
+      contact: contact?.name,
+    });
     Akuvox.makeCall(sipToCall, contact.name, 1); // 1 for video call
     setModalVisible(false);
 
@@ -205,29 +248,16 @@ export default function SdkContactScreen({ navigation }) {
     navigation.navigate('ActiveCallScreen', {
       callId: 'dialing',
       remoteName: contact.name,
-      isOutgoing: true
+      isOutgoing: true,
+      dialTargets: sipCandidates,
+      dialTargetIndex: 0,
+      callVideoMode: 1,
     });
-  };
-
-  // Accept/Reject Incoming Call
-  const handleAcceptCall = async () => {
-    if (!incomingCall || !incomingCall.callId) return;
-    Akuvox.answerCall(incomingCall.callId); // Native must implement this!
-    setShowVideoCall(true);
-    setIncomingCall(null);
-  };
-
-  const handleRejectCall = async () => {
-    if (!incomingCall || !incomingCall.callId) return;
-    Akuvox.hangupCall(incomingCall.callId); // Ends the incoming call
-    setShowVideoCall(false);
-    setIncomingCall(null);
-    setCurrentCallId(null);
   };
 
   // List Item Render
   const renderContactItem = ({ item }) => {
-    const activeSip = registeredTransport ? pickSipForContact(item) : '(not registered)';
+    const activeSip = registeredTransport ? (getSipCandidatesForContact(item)[0] || '(missing sip)') : '(not registered)';
     return (
       <TouchableOpacity
         style={styles.contactItem}
@@ -290,63 +320,6 @@ export default function SdkContactScreen({ navigation }) {
     </Modal>
   );
 
-  // Incoming Call UI
-  const IncomingCallModal = () => (
-    <Modal
-      visible={!!incomingCall}
-      transparent
-      animationType="fade"
-      onRequestClose={handleRejectCall}
-    >
-      <View style={styles.incomingModalBg}>
-        <View style={styles.incomingModalContainer}>
-          <Text style={styles.incomingTitle}>Incoming Call</Text>
-          <Text style={styles.incomingFrom}>
-            {incomingCall?.remoteDisplayName
-              ? `From: ${incomingCall.remoteDisplayName}`
-              : incomingCall?.remoteUserName
-              ? `From: ${incomingCall.remoteUserName}`
-              : incomingCall?.from
-              ? `From: ${incomingCall.from}`
-              : ''}
-          </Text>
-          <View style={styles.incomingBtnRow}>
-            <TouchableOpacity style={styles.acceptBtn} onPress={handleAcceptCall}>
-              <Text style={styles.acceptBtnText}>Accept</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.rejectBtn} onPress={handleRejectCall}>
-              <Text style={styles.rejectBtnText}>Reject</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  // Video Call Overlay UI (only shown with valid callId)
-  const VideoCallOverlay = () => (
-    <View style={styles.videoCallOverlay} pointerEvents="box-none">
-      {/* Remote video full screen */}
-      {(currentCallId !== null) && (
-        <VideoCallView style={styles.remoteVideo} type="remote" callId={currentCallId} />
-      )}
-      {/* Local video in corner */}
-      <VideoCallView style={styles.localVideo} type="local" />
-      <TouchableOpacity
-        style={styles.endCallButton}
-        onPress={() => {
-          if (currentCallId !== null) {
-            Akuvox.hangupCall(currentCallId);
-          }
-          setShowVideoCall(false);
-          setCurrentCallId(null);
-        }}
-      >
-        <Text style={styles.endCallText}>End Call</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header with status pill (no init/register buttons) */}
@@ -372,8 +345,6 @@ export default function SdkContactScreen({ navigation }) {
       )}
 
       {modalVisible && selectedContact && <CallOptionsModal />}
-      {incomingCall && <IncomingCallModal />}
-      {showVideoCall && currentCallId !== null && <VideoCallOverlay />}
     </SafeAreaView>
   );
 }

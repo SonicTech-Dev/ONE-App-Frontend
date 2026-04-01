@@ -10,8 +10,8 @@ import { AuthProvider } from './app/context/AuthContext';
 import IncomingCallModal from './app/components/CallUI/IncomingCallModal';
 import { navigationRef } from './app/navigation/rootNavigation';
 
-const { AkuvoxModule } = NativeModules;
-const eventEmitter = new NativeEventEmitter(AkuvoxModule);
+const { Akuvox } = NativeModules;
+const eventEmitter = new NativeEventEmitter(Akuvox);
 
 export default function App() {
   /*
@@ -50,14 +50,22 @@ export default function App() {
 
   const handleReject = () => {
     if (incomingCallState) {
-      AkuvoxModule.hangupCall(incomingCallState.callId);
+      Akuvox.hangupCall(incomingCallState.callId);
       setIncomingCallState(null);
     }
   };
 
   const handleAccept = () => {
     if (incomingCallState) {
-      AkuvoxModule.answerCall(incomingCallState.callId, incomingCallState.callVideoMode);
+      const callVideoMode = typeof incomingCallState.callVideoMode === 'number'
+        ? incomingCallState.callVideoMode
+        : 1;
+
+      if (typeof Akuvox.answerCallWithMode === 'function') {
+        Akuvox.answerCallWithMode(incomingCallState.callId, callVideoMode);
+      } else {
+        Akuvox.answerCall(incomingCallState.callId);
+      }
       navigationRef.navigate('ActiveCallScreen', { 
         callId: incomingCallState.callId,
         remoteName: incomingCallState.remoteDisplayName || incomingCallState.remoteUserName

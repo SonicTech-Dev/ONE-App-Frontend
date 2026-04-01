@@ -182,6 +182,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                     params.putInt("callId", callData.callId);
                     params.putString("remoteUserName", callData.remoteUserName);
                     params.putString("remoteDisplayName", callData.remoteDisplayName);
+                    params.putInt("callVideoMode", callData.callVideoMode);
                     emitToJS("onIncomingCall", params);
                     return 0;
                 }
@@ -198,6 +199,9 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 @Override
                 public int sipMessageRegStatus(int status) {
                     Log.d("SIP", "Registration status: " + status);
+                    WritableMap params = Arguments.createMap();
+                    params.putInt("status", status);
+                    emitToJS("onSipRegStatus", params);
                     return 0;
                 }
                 @Override
@@ -285,6 +289,11 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void answerCall(int callId) {
         MediaManager.getInstance(activityOrApp()).answerCall(callId, 1);
+    }
+
+    @ReactMethod
+    public void answerCallWithMode(int callId, int callVideoMode) {
+        MediaManager.getInstance(activityOrApp()).answerCall(callId, callVideoMode);
     }
 
     // ---------------- SMART LOCK LAN MONITORING FLOW ---------------- //

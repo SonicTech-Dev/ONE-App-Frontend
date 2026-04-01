@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Animated, Alert, Platform, PermissionsAndroid, NativeModules } from 'react-native';
+import { Animated, Alert, Platform, PermissionsAndroid, NativeModules, NativeEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from '../components/Smart/Header';
 import StatsSection from '../components/Smart/StatsSection';
@@ -68,11 +68,22 @@ export default function SmartScreen({ navigation }) {
   // SIP state
   const [sipInitialized, setSipInitialized] = useState(false);
   const [lastRegisteredTransport, setLastRegisteredTransport] = useState(null); // 'lan' | 'wan' | null
+  const [sipRegistrationStatus, setSipRegistrationStatus] = useState(null);
 
   useEffect(() => {
     console.log('[SmartScreen] selectedOption:', selectedOption);
     console.log('[SmartScreen] callbackRegistered:', callbackRegistered);
   }, [selectedOption, callbackRegistered]);
+
+  useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(Akuvox);
+    const subscription = eventEmitter.addListener('onSipRegStatus', ({ status }) => {
+      console.log('[SmartScreen] Native SIP registration status:', status);
+      setSipRegistrationStatus(status);
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   // Init SDK once when we land on SmartScreen and detect device IPv4
   useEffect(() => {
@@ -80,7 +91,7 @@ export default function SmartScreen({ navigation }) {
     (async () => {
       const permissionsGranted = await requestPermissionsIfNeeded();
       if (!permissionsGranted) {
-        Console.log('Permission Denied', 'Camera and microphone permissions are required for calls.');
+        Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
         return;
       }
       try {
@@ -91,7 +102,7 @@ export default function SmartScreen({ navigation }) {
         }
       } catch (e) {
         console.warn('[SmartScreen] initSdk error:', e);
-        Console.log('SDK Error', e?.message || 'Failed to initialize SIP SDK.');
+        Alert.alert('SDK Error', e?.message || 'Failed to initialize SIP SDK.');
       }
 
       // Detect local IPv4 address
@@ -122,6 +133,9 @@ export default function SmartScreen({ navigation }) {
             console.log('[SmartScreen] LAN register result:', res);
             setLastRegisteredTransport('lan');
             await AsyncStorage.setItem('registeredTransport', 'lan');
+            const status = await Akuvox.getSipStatus();
+            setSipRegistrationStatus(status);
+            console.log('[SmartScreen] SIP line status after LAN registration:', status);
           }
         } else if (selectedOption === 'WAN') {
           if (lastRegisteredTransport !== 'wan') {
@@ -130,11 +144,14 @@ export default function SmartScreen({ navigation }) {
             console.log('[SmartScreen] WAN register result:', res);
             setLastRegisteredTransport('wan');
             await AsyncStorage.setItem('registeredTransport', 'wan');
+            const status = await Akuvox.getSipStatus();
+            setSipRegistrationStatus(status);
+            console.log('[SmartScreen] SIP line status after WAN registration:', status);
           }
         }
       } catch (error) {
         console.warn('[SmartScreen] SIP registration error:', error);
-        Console.log('SIP Registration Error', error?.message || 'Failed to register SIP.');
+        Alert.alert('SIP Registration Error', error?.message || 'Failed to register SIP.');
       }
     };
 
@@ -224,7 +241,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const newIsOn = newControl === 'on';
@@ -248,7 +265,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const command = dev.commandPair['on'];
@@ -263,7 +280,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const attribute = mode === 'lan'
@@ -278,7 +295,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const attribute = mode === 'lan'
@@ -293,7 +310,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const attribute = mode === 'lan'
@@ -308,7 +325,7 @@ export default function SmartScreen({ navigation }) {
     const mode = selectedOption.toLowerCase();
     const dev = device[mode];
     if (!dev || !dev.commandPair) {
-      Console.log('Not supported', `This device cannot be controlled via ${selectedOption}.`);
+      Alert.alert('Not supported', `This device cannot be controlled via ${selectedOption}.`);
       return;
     }
     const attribute = mode === 'lan'

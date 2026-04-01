@@ -8,9 +8,33 @@ const { Akuvox } = NativeModules;
 const eventEmitter = new NativeEventEmitter(Akuvox);
 
 export default function ActiveCallScreen({ route, navigation }) {
-  const { callId, remoteName, isOutgoing } = route.params || {};
-  const [activeCallId, setActiveCallId] = useState(callId === 'dialing' ? null : callId);
+  const { callId, remoteName, isOutgoing, dialTargets, dialTargetIndex, callVideoMode } = route.params || {};
+  const initialCallId = callId === 'dialing' ? null : Number(callId);
+  const [activeCallId, setActiveCallId] = useState(Number.isFinite(initialCallId) ? initialCallId : null);
+  const [isClosing, setIsClosing] = useState(false);
+  const [currentDialIndex, setCurrentDialIndex] = useState(
+    Number.isInteger(dialTargetIndex) && dialTargetIndex >= 0 ? dialTargetIndex : 0
+  );
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const closingRef = useRef(false);
+  const retryingRef = useRef(false);
+
+  const closeScreen = () => {
+    if (closingRef.current) {
+      return;
+    }
+
+    closingRef.current = true;
+    setIsClosing(true);
+    setActiveCallId(null);
+
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate('AppNavigator');
+  };
 
   // Pulse animation for dialing
   useEffect(() => {
@@ -27,15 +51,36 @@ export default function ActiveCallScreen({ route, navigation }) {
   useEffect(() => {
     // Listen for connection
     const callEstablishedSub = eventEmitter.addListener('onCallEstablished', (data) => {
-      if (isOutgoing) {
-        setActiveCallId(data.callId); // Call connected!
+      if (data?.callId && data.callId !== activeCallId) {
+        setActiveCallId(data.callId); // Keep callId synced even if route params were stale
       }
     });
 
     // Listen for call finished event to auto-close the screen
     const callFinishedSub = eventEmitter.addListener('onCallFinished', (data) => {
+      const reason = String(data?.reason || '');
+      const isTemporaryFailure = /temporarily unavailable|not found|busy here/i.test(reason);
+      const targets = Array.isArray(dialTargets) ? dialTargets : [];
+      const nextIndex = currentDialIndex + 1;
+
+      if (isOutgoing && isTemporaryFailure && nextIndex < targets.length && !retryingRef.current) {
+        const nextTarget = targets[nextIndex];
+        if (nextTarget) {
+          retryingRef.current = true;
+          setCurrentDialIndex(nextIndex);
+          setActiveCallId(null);
+
+          const nextMode = Number.isInteger(callVideoMode) ? callVideoMode : 1;
+          setTimeout(() => {
+            Akuvox.makeCall(nextTarget, remoteName || 'Unknown Caller', nextMode);
+            retryingRef.current = false;
+          }, 250);
+          return;
+        }
+      }
+
       if (data.callId === activeCallId || data.callId === callId || !activeCallId) {
-        navigation.goBack();
+        closeScreen();
       }
     });
 
@@ -43,16 +88,21 @@ export default function ActiveCallScreen({ route, navigation }) {
       callEstablishedSub.remove();
       callFinishedSub.remove();
     };
-  }, [activeCallId, callId, navigation, isOutgoing]);
+  }, [activeCallId, callId, isOutgoing, dialTargets, currentDialIndex, remoteName, callVideoMode]);
 
   const handleHangup = () => {
-    if (activeCallId) {
-      Akuvox.hangupCall(activeCallId);
-    } else {
-      Akuvox.hangupCall(0); // Optional: hangup generic logic for canceling dialing
+    const targetCallId = activeCallId || (typeof callId === 'number' ? callId : null);
+
+    if (targetCallId) {
+      Akuvox.hangupCall(targetCallId);
     }
-    navigation.goBack();
+
+    closeScreen();
   };
+
+  if (isClosing) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

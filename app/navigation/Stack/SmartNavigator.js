@@ -26,45 +26,35 @@ const SmartNavigator = ({ route, navigation }) => {
         name="SdkTest"
         component={SdkTest}
         options={{
-          headerShown: true,
-          title: "SDK Test",
-          headerTitleStyle: { color: 'black' },
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="SmartLockScreen"
         component={SmartLockScreen}
         options={{
-          headerShown: true,
-          title: "SL50 Smart Lock",
-          headerTitleStyle: { color: 'black' },
+          headerShown: false,
         }}
         />
       <Stack.Screen
         name="IntercomScreen"
         component={IntercomScreen}
         options={{
-          headerShown: true,
-          title: "R29 Intercom",
-          headerTitleStyle: { color: 'black' },
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="DeviceStatuses"
         component={DeviceStatuses}
         options={{
-          headerShown: true,
-          title: "All Devices Status",
-          headerTitleStyle: { color: 'black' },
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="IPCameraScreen"
         component={IPCamera}
         options={{
-          headerShown: true,
-          title: "IP Camera Screen",
-          headerTitleStyle: { color: 'black' },
+          headerShown: false,
         }}
       />
     </Stack.Navigator>
