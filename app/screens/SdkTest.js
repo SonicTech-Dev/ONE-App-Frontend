@@ -295,14 +295,14 @@ export default function SdkContactScreen({ navigation }) {
           </Text>
           <View style={styles.modalButtons}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#3182ce' }]}
+              style={[styles.actionBtn, styles.audioBtn]}
               onPress={() => handleMakeAudioCall(selectedContact)}
             >
               <Text style={styles.actionText}>Audio Call</Text>
             </TouchableOpacity>
             <View style={{ height: 12 }} />
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#38a169' }]}
+              style={[styles.actionBtn, styles.videoBtn]}
               onPress={() => handleMakeVideoCall(selectedContact)}
             >
               <Text style={styles.actionText}>Video Call</Text>
@@ -310,10 +310,10 @@ export default function SdkContactScreen({ navigation }) {
           </View>
           <View style={{ height: 12 }} />
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: '#a0aec0' }]}
+            style={[styles.actionBtn, styles.cancelBtn]}
             onPress={() => setModalVisible(false)}
           >
-            <Text style={styles.actionText}>Cancel</Text>
+            <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -325,8 +325,8 @@ export default function SdkContactScreen({ navigation }) {
       {/* Header with status pill (no init/register buttons) */}
       <View style={styles.headerBar}>
         <Text style={styles.headerTitle}>Contacts</Text>
-        <View style={[styles.statusPill, { backgroundColor: registeredTransport ? '#C6F6D5' : '#FED7D7' }]}>
-          <Text style={[styles.statusPillText, { color: registeredTransport ? '#22543D' : '#822727' }]}>
+        <View style={[styles.statusPill, registeredTransport ? styles.statusPillReady : styles.statusPillIdle]}>
+          <Text style={[styles.statusPillText, registeredTransport ? styles.statusPillTextReady : styles.statusPillTextIdle]}>
             {registeredTransport ? `Registered: ${registeredTransport.toUpperCase()}` : 'Not Registered'}
           </Text>
         </View>
@@ -350,48 +350,79 @@ export default function SdkContactScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0d0d0d' }, // Ultra dark background
+  safeArea: { flex: 1, backgroundColor: '#f4f0ff' },
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    backgroundColor: 'rgba(20,20,20,0.8)',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e7dcff',
+    shadowColor: '#7f58e2',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
     borderBottomWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: '#efe5ff',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 0.5,
+    color: '#3a2c63',
+    letterSpacing: 0.2,
   },
   statusPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  statusPillReady: {
+    backgroundColor: '#ede5ff',
+    borderColor: '#dccbff',
+  },
+  statusPillIdle: {
+    backgroundColor: '#f5f2ff',
+    borderColor: '#e7dcff',
   },
   statusPillText: {
     fontSize: 12,
     fontWeight: '700',
   },
+  statusPillTextReady: {
+    color: '#5b38c2',
+  },
+  statusPillTextIdle: {
+    color: '#826fb3',
+  },
   contactItem: {
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     borderRadius: 16,
-    backgroundColor: '#1a1a1c', // Dark frosted row
+    backgroundColor: '#ffffff',
     marginVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: '#e9deff',
+    shadowColor: '#7f58e2',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
   },
   contactAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#32d2d6',
+    backgroundColor: '#6f4bd8',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -406,14 +437,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contactName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 4,
+    color: '#2f2550',
+    marginBottom: 3,
   },
   contactDetail: {
-    fontSize: 14,
-    color: '#8e8e93',
+    fontSize: 13,
+    color: '#7f72a3',
     fontWeight: '500',
   },
   separator: {
@@ -421,33 +452,34 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent', 
   },
   sipStatus: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#34c759',
+    marginTop: 10,
+    marginBottom: 14,
+    fontSize: 13,
+    color: '#6f4bd8',
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(83,53,176,0.26)',
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
   modalContainer: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 30,
     width: '100%',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#e9dcff',
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '700',
     marginBottom: 24,
-    color: '#ffffff',
+    color: '#31265a',
     textAlign: 'center',
   },
   modalButtons: {
@@ -461,9 +493,27 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginHorizontal: 6,
+    borderWidth: 1,
+  },
+  audioBtn: {
+    backgroundColor: '#6f4bd8',
+    borderColor: '#6f4bd8',
+  },
+  videoBtn: {
+    backgroundColor: '#8a68f0',
+    borderColor: '#8a68f0',
+  },
+  cancelBtn: {
+    backgroundColor: '#f3edff',
+    borderColor: '#dfd0ff',
   },
   actionText: {
     color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  cancelText: {
+    color: '#6246bb',
     fontWeight: '700',
     fontSize: 16,
   },

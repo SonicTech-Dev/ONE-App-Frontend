@@ -29,7 +29,10 @@ const DeviceStatuses = () => {
       />
 
       <ScrollViewWrapper>
-        <HeaderTitle>Device Status</HeaderTitle>
+        <HeaderCard>
+          <HeaderTitle>All Device Status</HeaderTitle>
+          <HeaderSubtitle>Live health for every connected smart device.</HeaderSubtitle>
+        </HeaderCard>
         {INITIAL_DEVICE_CATEGORIES.map((category, categoryIndex) => (
           <CategoryContainer key={categoryIndex}>
             <CategoryHeader>{category.category}</CategoryHeader>
@@ -52,14 +55,17 @@ const DeviceStatuses = () => {
                     </DeviceInfo>
 
                     {loading && !hasStatus ? (
-                      <StatusPill color="#4a5568">
-                        <StatusInnerDot color="#a0aec0" />
+                      <StatusPill color="#f1ebff" borderColor="#ddd0ff">
+                        <StatusInnerDot color="#8a68f0" />
                         <PillText>Checking</PillText>
                       </StatusPill>
                     ) : (
-                      <StatusPill color={isOnline ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 59, 48, 0.15)'}>
-                        <StatusInnerDot color={isOnline ? '#34c759' : '#ff3b30'} />
-                        <PillText color={isOnline ? '#248a3d' : '#bd2a22'}>
+                      <StatusPill
+                        color={isOnline ? 'rgba(111, 75, 216, 0.14)' : 'rgba(111, 75, 216, 0.08)'}
+                        borderColor={isOnline ? 'rgba(111, 75, 216, 0.3)' : 'rgba(111, 75, 216, 0.18)'}
+                      >
+                        <StatusInnerDot color={isOnline ? '#6f4bd8' : '#9f8bcf'} />
+                        <PillText color={isOnline ? '#5b38c2' : '#7f72a3'}>
                           {isOnline ? 'Online' : 'Offline'}
                         </PillText>
                       </StatusPill>
@@ -80,34 +86,51 @@ export default DeviceStatuses;
 // Styled Components
 const ScrollViewWrapper = styled.ScrollView`
   flex: 1;
-  background-color: #f2f2f7; /* iOS System Gray 6 */
+  background-color: #f4f0ff;
+`;
+
+const HeaderCard = styled.View`
+  margin: 14px 16px 10px 16px;
+  background-color: #ffffff;
+  border-radius: 18px;
+  border-width: 1px;
+  border-color: #e8dcff;
+  padding: 14px;
 `;
 
 const HeaderTitle = styled.Text`
-  font-size: 34px;
+  font-size: 22px;
   font-weight: 800;
-  color: #000;
-  margin: 20px 20px 10px 20px;
+  color: #33285d;
+`;
+
+const HeaderSubtitle = styled.Text`
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8173a7;
 `;
 
 const CategoryContainer = styled.View`
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   padding: 0 16px;
 `;
 
 const CategoryHeader = styled.Text`
-  font-size: 15px;
-  font-weight: 600;
-  color: #8e8e93;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b54a8;
   text-transform: uppercase;
-  margin-bottom: 8px;
-  margin-left: 16px;
+  margin-bottom: 10px;
+  margin-left: 12px;
   letter-spacing: 0.5px;
 `;
 
 const DeviceGroup = styled.View`
   background-color: #ffffff;
-  border-radius: 12px;
+  border-radius: 16px;
+  border-width: 1px;
+  border-color: #e9deff;
   overflow: hidden;
 `;
 
@@ -115,10 +138,10 @@ const DeviceRow = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 14px 16px;
   background-color: #ffffff;
   border-bottom-width: ${(props) => (props.isLast ? '0px' : '0.5px')};
-  border-bottom-color: #c6c6c8;
+  border-bottom-color: #efe6ff;
 `;
 
 const DeviceInfo = styled.View`
@@ -126,15 +149,15 @@ const DeviceInfo = styled.View`
 `;
 
 const DeviceName = styled.Text`
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
-  color: #000;
+  color: #2f2550;
   margin-bottom: 2px;
 `;
 
 const DeviceLocation = styled.Text`
-  font-size: 13px;
-  color: #8e8e93;
+  font-size: 12px;
+  color: #7f72a3;
   font-weight: 500;
 `;
 
@@ -142,8 +165,10 @@ const StatusPill = styled.View`
   flex-direction: row;
   align-items: center;
   background-color: ${(props) => props.color};
+  border-width: 1px;
+  border-color: ${(props) => props.borderColor || 'transparent'};
   padding: 6px 12px;
-  border-radius: 14px;
+  border-radius: 999px;
 `;
 
 const StatusInnerDot = styled.View`
@@ -155,7 +180,7 @@ const StatusInnerDot = styled.View`
 `;
 
 const PillText = styled.Text`
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  color: ${(props) => props.color || '#fff'};
-`;
+  color: ${(props) => props.color || '#5f49a9'};
+`;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
@@ -37,11 +37,11 @@ const DeviceTile = ({
                    title.toLowerCase().includes("detector");
   const isPanel = title.toLowerCase().includes("hypanel");
 
-  // Create a stunning translucent gradient backing by combining dark surface with a subtle colored aura
+  // Keep tile surface consistent with the Smart page's purple-white visual language.
   const glassStyle = {
-    backgroundColor: '#7c59e6',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#e8dbff',
   };
 
   return (
@@ -97,14 +97,14 @@ export default DeviceTile;
 const styles = StyleSheet.create({
   tileContainer: {
     flex: 1,
-    padding: 20,
-    borderRadius: 28, // Extreme Apple-like rounding
+    padding: 18,
+    borderRadius: 22,
     marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowColor: '#7f58e2',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
     justifyContent: 'space-between',
   },
   topRow: {
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#6f4bd8',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -131,15 +131,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   title: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 0.3,
-    marginBottom: 6,
+    color: '#2f2853',
+    letterSpacing: 0.2,
+    marginBottom: 4,
   },
   location: {
     fontSize: 13,
-    color: '#8e8e93',
+    color: '#8a7cae',
     fontWeight: '600',
   },
   footer: {
@@ -149,17 +149,17 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   status: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    color: '#6a4ab8',
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   
   // Power Button Styles
   powerButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 16,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -169,17 +169,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   powerButtonActive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#ffffff',
-    shadowColor: '#ffffff',
+    backgroundColor: '#6f4bd8',
+    borderColor: '#6f4bd8',
+    shadowColor: '#6f4bd8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.28,
     shadowRadius: 8,
     elevation: 4,
   },
   powerButtonInactive: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'transparent',
+    backgroundColor: '#f4eeff',
+    borderColor: '#e8dbff',
   },
   powerIndicator: {
     width: 6,
@@ -188,14 +188,14 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   indicatorActive: {
-    backgroundColor: '#966afd',
-    shadowColor: '#966afd',
+    backgroundColor: '#ffffff',
+    shadowColor: '#ffffff',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
   },
   indicatorInactive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: '#b9a7e7',
   },
   powerText: {
     fontSize: 13,
@@ -203,10 +203,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   powerTextActive: {
-    color: '#6f4bd8', // Dark text on light pill
+    color: '#ffffff',
   },
   powerTextInactive: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6d52b2',
   },
 
   // Sensor Badge Styles
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#f1eaff',
   },
   pulseDot: {
     width: 8,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   sensorText: {
-    color: '#ffffff',
+    color: '#5d46a2',
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',

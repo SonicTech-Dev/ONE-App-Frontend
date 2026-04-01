@@ -182,7 +182,7 @@ export default function SmartLockScreen() {
   };
 
   return (
-    <Screen style={{ backgroundColor: '#f8f9fc' }}>
+    <Screen style={{ backgroundColor: '#f4f0ff' }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.metaRow}>
           <View style={styles.metaChip}>
@@ -214,8 +214,8 @@ export default function SmartLockScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fc' },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 12 },
+  container: { flex: 1, backgroundColor: '#f4f0ff' },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -225,19 +225,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#6f4bd8',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e6d8ff',
   },
   metaChipSoft: {
-    backgroundColor: '#efe8ff',
+    backgroundColor: '#6f4bd8',
+    borderColor: '#6f4bd8',
   },
   metaText: {
-    color: '#ffffff',
+    color: '#6346b0',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   metaTextSoft: {
-    color: '#6a4ab8',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -248,9 +251,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
     marginBottom: 14,
-    shadowColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#e7dcff',
+    shadowColor: '#7f58e2',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 4,
   },
@@ -258,10 +263,15 @@ const styles = StyleSheet.create({
   lockSubtitle: { fontSize: 13, color: '#6c7a90', marginBottom: 16, lineHeight: 19 },
   unlockButton: {
     width: '100%',
-    backgroundColor: '#966afd',
+    backgroundColor: '#6f4bd8',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#6f4bd8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 4,
   },
   unlockButtonText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.4 },
   statusBadge: {
@@ -272,7 +282,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   statusSuccess: {
-    backgroundColor: '#efe8ff',
+    backgroundColor: '#f1e9ff',
   },
   statusError: {
     backgroundColor: '#fbe4e4',
@@ -287,11 +297,17 @@ const styles = StyleSheet.create({
     aspectRatio: 1.58,
     borderRadius: 18,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e7dbff',
     marginTop: 2,
     marginBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
+    shadowColor: '#7f58e2',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 4,
   },
   nativeVideo: { flex: 1, width: '100%', minHeight: 220, backgroundColor: '#111' },
   monitorType: {
@@ -301,7 +317,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 11,
-    backgroundColor: 'rgba(111,75,216,0.24)',
+    backgroundColor: 'rgba(111,75,216,0.78)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,

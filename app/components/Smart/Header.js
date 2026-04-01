@@ -1,13 +1,16 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
 const Header = ({ name }) => {
+  const displayName = (name || '').trim() || 'there';
+
   return(
   <View style={styles.headerContainer}>
-    <View style={{flexDirection:'column', flex:1, justifyContent:'center'}}>
+    <View style={styles.textBlock}>
     <Text style={styles.greeting}>
-      Hey, <Text style={styles.boldText}>{name}</Text>
+      Hey, <Text style={styles.boldText}>{displayName}</Text>
     </Text>
+    <Text style={styles.subtitle}>Your home is ready</Text>
     </View>
   </View>
 )};
@@ -16,24 +19,31 @@ export default Header;
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  greeting: {
-    fontSize: 18,
-    color: '#2d3748',
+  textBlock: {
+    flexDirection: 'column',
     flex: 1,
+    justifyContent: 'center',
+  },
+  greeting: {
+    fontSize: 21,
+    color: '#2f2360',
+    flex: 1,
+    letterSpacing: 0.2,
   },
   boldText: {
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  subtitle: {
+    marginTop: 2,
+    color: '#8d79c8',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

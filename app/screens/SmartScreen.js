@@ -201,14 +201,14 @@ export default function SmartScreen({ navigation }) {
   };
 
   const headerTranslateY = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [0, -210],
+    inputRange: [0, 166],
+    outputRange: [0, -196],
     extrapolate: 'clamp',
   });
 
   const tabsTranslateY = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [170, 0],
+    inputRange: [0, 166],
+    outputRange: [166, 0],
     extrapolate: 'clamp',
   });
 

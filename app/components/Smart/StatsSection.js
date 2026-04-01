@@ -21,8 +21,8 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           onPress={() => navigation.navigate('SdkTest')}
           activeOpacity={0.7}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
-            <MaterialIcons name="contact-page" size={26} color="#ffffff" />
+          <View style={[styles.actionButtonIcon, { backgroundColor: '#f2ebff' }]}>
+            <MaterialIcons name="contact-page" size={24} color="#6f4bd8" />
           </View>
           <Text style={styles.actionButtonLabel}>Contacts</Text>
         </TouchableOpacity>
@@ -33,8 +33,8 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           onPress={() => navigation.navigate('SmartLockScreen')}
           activeOpacity={0.7}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
-            <MaterialIcons name="door-sliding" size={26} color="#ffffff" />
+          <View style={[styles.actionButtonIcon, { backgroundColor: '#efe6ff' }]}>
+            <MaterialIcons name="door-sliding" size={24} color="#6f4bd8" />
           </View>
           <Text style={styles.actionButtonLabel}>Locks</Text>
         </TouchableOpacity>
@@ -51,8 +51,8 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           })}
           activeOpacity={0.7}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
-            <MaterialIcons name="sensor-door" size={26} color="#ffffff" />
+          <View style={[styles.actionButtonIcon, { backgroundColor: '#efe6ff' }]}>
+            <MaterialIcons name="sensor-door" size={24} color="#6f4bd8" />
           </View>
           <Text style={styles.actionButtonLabel}>Intercom</Text>
         </TouchableOpacity>
@@ -63,8 +63,8 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           onPress={() => navigation.navigate('IPCameraScreen', { selectedOption })}
           activeOpacity={0.7}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
-            <MaterialCommunityIcons name="cctv" size={26} color="#ffffff" />
+          <View style={[styles.actionButtonIcon, { backgroundColor: '#f2ebff' }]}>
+            <MaterialCommunityIcons name="cctv" size={24} color="#6f4bd8" />
           </View>
           <Text style={styles.actionButtonLabel}>Cameras</Text>
         </TouchableOpacity>
@@ -128,43 +128,55 @@ const RadioRow = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 14px;
+  margin-top: 2px;
 `;
 
 const RadioContainer = styled.View`
   flex-direction: row;
   align-items: center;
+  background-color: #ffffff;
+  border-width: 1px;
+  border-color: #e7dcff;
+  border-radius: 999px;
+  padding: 4px;
 `;
 
 const RadioOption = styled(TouchableOpacity)`
   flex-direction: row;
   align-items: center;
-  margin: 0 12px;
+  margin: 0 2px;
+  padding: 4px 10px;
+  border-radius: 999px;
 `;
 
 const RadioCircle = styled.View`
-  width: 20px;
-  height: 20px;
-  border-radius: 10px;
-  border: 2px solid #966afd;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  border: 2px solid #7f58e2;
   align-items: center;
   justify-content: center;
-  background-color: ${(props) => (props.selected ? '#966afd' : 'transparent')};
+  background-color: ${(props) => (props.selected ? '#7f58e2' : '#ffffff')};
 `;
 
 const RadioText = styled.Text`
-  margin-left: 8px;
-  font-size: 16px;
-  color: #333;
+  margin-left: 6px;
+  font-size: 13px;
+  color: #4f3a8a;
+  font-weight: 700;
 `;
 
 const NavigateButton = styled(TouchableOpacity)`
   flex-direction: row;
   align-items: center;
+  background-color: #efe6ff;
+  padding: 8px 10px;
+  border-radius: 12px;
 `;
 
 const NavigateText = styled.Text`
-  font-size: 12px;
-  color: #6f4bd8;
-  margin-left: 8px;
+  font-size: 11px;
+  color: #5d41b0;
+  font-weight: 700;
 `;
