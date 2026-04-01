@@ -108,13 +108,13 @@ export default function FourGangSwitchSingleModal({
 const styles = StyleSheet.create({
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(111,75,216,0.28)',
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
   modalContent: {
     width: '100%',
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#6f4bd8',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 30,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   switchControlButtonText: {
-    color: '#1c1c1e',
+    color: '#6f4bd8',
     fontWeight: '800',
     fontSize: 16,
   },

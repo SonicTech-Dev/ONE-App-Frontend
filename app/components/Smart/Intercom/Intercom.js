@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#6f4bd8',
   },
   contextChipText: {
     color: '#fff',
@@ -190,10 +190,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   modeChip: {
-    backgroundColor: '#eaf2ff',
+    backgroundColor: '#efe8ff',
   },
   modeChipText: {
-    color: '#325ea8',
+    color: '#6a4ab8',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(111,75,216,0.28)',
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   buttonPrimary: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#966afd',
   },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 15, textAlign: 'center' },
 });

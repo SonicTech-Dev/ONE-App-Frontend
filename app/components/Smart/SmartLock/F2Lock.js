@@ -151,7 +151,7 @@ export default function F2LockModal({
 const styles = StyleSheet.create({
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(111,75,216,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },

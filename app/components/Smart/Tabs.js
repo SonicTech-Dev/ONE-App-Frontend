@@ -50,15 +50,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#f0f4f8',
+    backgroundColor: '#efe8ff',
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e3d7ff',
   },
   activeTab: (colors)=>({
     backgroundColor: colors.primary, // Highlight color for the active tab
   }),
   tabText: {
     fontSize: 14,
-    color: '#2d3748',
+    color: '#5f4598',
+    fontWeight: '600',
   },
   activeTabText: {
     color: '#ffffff', // Text color for the active tab

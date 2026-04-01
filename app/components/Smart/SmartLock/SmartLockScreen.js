@@ -225,10 +225,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#6f4bd8',
   },
   metaChipSoft: {
-    backgroundColor: '#eef1f6',
+    backgroundColor: '#efe8ff',
   },
   metaText: {
     color: '#ffffff',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   metaTextSoft: {
-    color: '#44536a',
+    color: '#6a4ab8',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   lockSubtitle: { fontSize: 13, color: '#6c7a90', marginBottom: 16, lineHeight: 19 },
   unlockButton: {
     width: '100%',
-    backgroundColor: '#1f8a70',
+    backgroundColor: '#966afd',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   statusSuccess: {
-    backgroundColor: '#dff7ec',
+    backgroundColor: '#efe8ff',
   },
   statusError: {
     backgroundColor: '#fbe4e4',
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1f513f',
+    color: '#5a3aa9',
   },
   videoContainer: {
     width: '100%',
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 11,
-    backgroundColor: 'rgba(0,0,0,0.48)',
+    backgroundColor: 'rgba(111,75,216,0.24)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,

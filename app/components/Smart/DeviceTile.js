@@ -39,9 +39,9 @@ const DeviceTile = ({
 
   // Create a stunning translucent gradient backing by combining dark surface with a subtle colored aura
   const glassStyle = {
-    backgroundColor: '#1c1c1e', // Apple deep dark Gray
+    backgroundColor: '#7c59e6',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   };
 
   return (
@@ -188,8 +188,8 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   indicatorActive: {
-    backgroundColor: '#32d2d6', // Neo-cyan glow
-    shadowColor: '#32d2d6',
+    backgroundColor: '#966afd',
+    shadowColor: '#966afd',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   powerTextActive: {
-    color: '#1c1c1e', // Dark text on light pill
+    color: '#6f4bd8', // Dark text on light pill
   },
   powerTextInactive: {
     color: 'rgba(255, 255, 255, 0.6)',

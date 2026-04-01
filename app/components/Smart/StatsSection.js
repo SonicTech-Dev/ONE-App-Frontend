@@ -21,8 +21,8 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           onPress={() => navigation.navigate('SdkTest')}
           activeOpacity={0.7}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(207, 216, 139, 0.2)' }]}>
-            <MaterialIcons name="contact-page" size={26} color="#cfd88bff" />
+          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
+            <MaterialIcons name="contact-page" size={26} color="#ffffff" />
           </View>
           <Text style={styles.actionButtonLabel}>Contacts</Text>
         </TouchableOpacity>
@@ -33,8 +33,8 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           onPress={() => navigation.navigate('SmartLockScreen')}
           activeOpacity={0.7}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(98, 154, 138, 0.2)' }]}>
-            <MaterialIcons name="door-sliding" size={26} color="#629a8aff" />
+          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
+            <MaterialIcons name="door-sliding" size={26} color="#ffffff" />
           </View>
           <Text style={styles.actionButtonLabel}>Locks</Text>
         </TouchableOpacity>
@@ -51,8 +51,8 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           })}
           activeOpacity={0.7}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(123, 136, 143, 0.2)' }]}>
-            <MaterialIcons name="sensor-door" size={26} color="#7b888fff" />
+          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
+            <MaterialIcons name="sensor-door" size={26} color="#ffffff" />
           </View>
           <Text style={styles.actionButtonLabel}>Intercom</Text>
         </TouchableOpacity>
@@ -63,8 +63,8 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           onPress={() => navigation.navigate('IPCameraScreen', { selectedOption })}
           activeOpacity={0.7}
         >
-          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(123, 136, 143, 0.2)' }]}>
-            <MaterialCommunityIcons name="cctv" size={26} color="#7b888fff" />
+          <View style={[styles.actionButtonIcon, { backgroundColor: 'rgba(255, 255, 255, 0.16)' }]}>
+            <MaterialCommunityIcons name="cctv" size={26} color="#ffffff" />
           </View>
           <Text style={styles.actionButtonLabel}>Cameras</Text>
         </TouchableOpacity>
@@ -146,10 +146,10 @@ const RadioCircle = styled.View`
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  border: 2px solid #007bff;
+  border: 2px solid #966afd;
   align-items: center;
   justify-content: center;
-  background-color: ${(props) => (props.selected ? '#007bff' : 'transparent')};
+  background-color: ${(props) => (props.selected ? '#966afd' : 'transparent')};
 `;
 
 const RadioText = styled.Text`
@@ -165,6 +165,6 @@ const NavigateButton = styled(TouchableOpacity)`
 
 const NavigateText = styled.Text`
   font-size: 12px;
-  color: #0073ffff;
+  color: #6f4bd8;
   margin-left: 8px;
 `;

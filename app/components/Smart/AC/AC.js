@@ -451,7 +451,7 @@ const sliderStyles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#6f4bd8',
     borderWidth: 3,
     borderColor: '#32d2d6',
     top: 4,
@@ -470,11 +470,11 @@ const sliderStyles = StyleSheet.create({
   modalBackground: {
     flex: 1,
     justifyContent: 'flex-end', // iOS slide-up style
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(111,75,216,0.28)',
   },
   modalContent: {
     width: '100%',
-    backgroundColor: '#1c1c1e', // Dark mode glass base
+    backgroundColor: '#6f4bd8', // Dark mode glass base
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 24,

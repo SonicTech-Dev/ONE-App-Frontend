@@ -41,7 +41,7 @@ export default StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 20,
-    backgroundColor: '#1c1c1e', // frosted dark grey
+    backgroundColor: '#6f4bd8', // frosted dark grey
     borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },

@@ -375,11 +375,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(111,75,216,0.28)',
   },
   modalContent: {
     width: '100%',
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#6f4bd8',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 30,
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   controlButtonText: {
-    color: '#1c1c1e',
+    color: '#6f4bd8',
     fontWeight: '800',
     fontSize: 16,
   },
