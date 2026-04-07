@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import Slider from '@react-native-community/slider';
 
 export default function DimmerLightModal({
@@ -14,7 +14,6 @@ export default function DimmerLightModal({
   const [lightState, setLightState] = useState("unknown");
   const [brightness, setBrightness] = useState(100); // Default to max if not present
   const [online, setOnline] = useState(null);
-  const [deviceImage, setDeviceImage] = useState(null);
   const [productName, setProductName] = useState("");
   const [deviceType, setDeviceType] = useState("");
   const [sliderEnabled, setSliderEnabled] = useState(false);
@@ -70,7 +69,6 @@ export default function DimmerLightModal({
         setSliderEnabled(false);
       }
 
-      setDeviceImage(result.device_picture_url || null);
       setOnline(result.online);
       setDeviceType(result.device_type || "");
       setProductName(result.product_name || result.device_name || "");
@@ -80,7 +78,6 @@ export default function DimmerLightModal({
       setBrightness(100);
       setSliderEnabled(false);
       setOnline(null);
-      setDeviceImage(null);
       setDeviceType("");
       setProductName("");
     }
@@ -109,11 +106,8 @@ export default function DimmerLightModal({
             <Text style={{ fontSize: 22 }}>✕</Text>
           </TouchableOpacity>
 
-          {/* Title & Image */}
+          {/* Title */}
           <Text style={styles.title}>{deviceLabel}</Text>
-          {deviceImage && (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          )}
 
           {/* Status display */}
           {loading ? (
@@ -234,14 +228,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     color: '#ffffff',
-  },
-  deviceImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    borderRadius: 10,
-    resizeMode: 'contain',
-    backgroundColor: '#f0f0f0',
   },
   statusContainer: {
     width: '100%',

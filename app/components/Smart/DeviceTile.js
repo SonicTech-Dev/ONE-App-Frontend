@@ -36,6 +36,9 @@ const DeviceTile = ({
   const isSensor = title.toLowerCase().includes("sensor") || 
                    title.toLowerCase().includes("detector");
   const isPanel = title.toLowerCase().includes("hypanel");
+  const hideStatusForPanel =
+    title.toLowerCase().includes('hypanel supreme') ||
+    title.toLowerCase().includes('hypanel lux');
 
   // Keep tile surface consistent with the Smart page's purple-white visual language.
   const glassStyle = {
@@ -64,12 +67,12 @@ const DeviceTile = ({
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
+        <Text style={styles.title} numberOfLines={2}>{title}</Text>
         <Text style={styles.location}>{location}</Text>
       </View>
 
       <View style={styles.footer}>
-        {!isSensor ? <Text style={styles.status}>{status}</Text> : <View />}
+        {!isSensor && !hideStatusForPanel ? <Text style={styles.status}>{status}</Text> : <View />}
         
         {/* Realistic Power Pill Button */}
         {onToggle && !isSensor && !isPanel && (
@@ -127,14 +130,17 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    minHeight: 58,
     marginBottom: 20,
     width: '100%',
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: '800',
     color: '#2f2853',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
     marginBottom: 4,
   },
   location: {

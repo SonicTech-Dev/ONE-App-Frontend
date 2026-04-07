@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image, ScrollView } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 
 export default function AirQualityMonitorModal({ visible, onClose, device, deviceStatus }) {
   // Default values
@@ -13,7 +13,6 @@ export default function AirQualityMonitorModal({ visible, onClose, device, devic
   let formaldehyde = "unknown";
   let tvoc = "unknown";
   let online = null;
-  let deviceImage = null;
   let deviceType = "";
   let productName = "";
 
@@ -39,7 +38,6 @@ export default function AirQualityMonitorModal({ visible, onClose, device, devic
     formaldehyde = getState(findAbility("formaldehyde"));
     tvoc = getState(findAbility("TVOC"));
 
-    deviceImage = deviceStatus.result.device_picture_url || null;
     online = deviceStatus.result.online;
     deviceType = deviceStatus.result.device_type || "";
     productName = deviceStatus.result.product_name || deviceStatus.result.device_name || "";
@@ -58,9 +56,6 @@ export default function AirQualityMonitorModal({ visible, onClose, device, devic
             <Text style={{ fontSize: 22 }}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{device?.title || productName || deviceType}</Text>
-          {deviceImage ? (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          ) : null}
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -174,13 +169,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     color: '#ffffff',
-  },
-  deviceImage: {
-    width: 90,
-    height: 90,
-    marginBottom: 10,
-    borderRadius: 10,
-    resizeMode: 'contain',
   },
   statusContainer: {
     width: '100%',

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from "react-native";
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 
 export default function C6LockModal({
   visible,
@@ -15,7 +15,6 @@ export default function C6LockModal({
   let battery = undefined;
   let tamperState = "unknown";
   let online = null;
-  let deviceImage = null;
   let deviceType = "";
   let productName = "";
 
@@ -59,7 +58,6 @@ export default function C6LockModal({
     tamperState = tamperAbility.state;
   }
 
-  deviceImage = result?.device_picture_url || device?.device_picture_url || null;
   online = result?.online;
   deviceType = result?.device_type || device?.device_type || "";
   productName = result?.product_name || result?.device_name || device?.product_name || device?.device_name || "";
@@ -79,9 +77,6 @@ export default function C6LockModal({
             <Text style={{ fontSize: 22 }}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{device?.title || productName || deviceType}</Text>
-          {deviceImage && (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          )}
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
               <ActivityIndicator size="large" color="#32d2d6" />
@@ -178,14 +173,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 10,
     textAlign: 'center',
-  },
-  deviceImage: {
-    width: 100,
-    height: 100,
-    marginBottom: 18,
-    borderRadius: 10,
-    resizeMode: 'contain',
-    backgroundColor: '#f0f0f0',
   },
   statusContainer: {
     width: '100%',

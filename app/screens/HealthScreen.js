@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback } from "react";
-import { View, Text, Alert, StyleSheet, ScrollView, Image, TouchableOpacity, Button, StatusBar } from "react-native";
+import { View, Text, Alert, StyleSheet, ScrollView, Image, TouchableOpacity, StatusBar } from "react-native";
 import axios from "axios";
 import { Linking } from "react-native";
 import storage from "../etc/Whoop/storage";
@@ -78,17 +78,11 @@ const HealthScreen = ({ navigation }) => {
   // OAuth Request Configuration
   const handleOAuthLogin = async () => {
     const authUrl = `${discovery.authorizationEndpoint}?client_id=${EXPO_WHOOP_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent("read:recovery read:cycles read:workout read:sleep read:profile offline")}&state=onedevelopment`;
-    
     try {
-      const supported = await Linking.canOpenURL(authUrl);
-      if (supported) {
-        await Linking.openURL(authUrl);
-      } else {
-        Alert.alert("Error", "Cannot open OAuth URL");
-      }
+      await Linking.openURL(authUrl);
     } catch (error) {
       console.error("Error opening OAuth URL:", error);
-      Alert.alert("Error", "Failed to open OAuth URL");
+      Alert.alert("Error", "Failed to open the WHOOP login page. Make sure a browser is installed.");
     }
   };
 
@@ -108,8 +102,31 @@ const HealthScreen = ({ navigation }) => {
     }
   };
 
-  // Handle OAuth Response - This will need to be handled via deep linking
+  // Handle OAuth Response via deep linking
   useEffect(() => {
+    const parseCode = (url) => {
+      const match = url && url.match(/[?&]code=([^&]+)/);
+      return match ? decodeURIComponent(match[1]) : null;
+    };
+
+    const handleUrl = ({ url }) => {
+      if (url && url.startsWith('one-demo-app://oauth/callback')) {
+        const code = parseCode(url);
+        if (code) exchangeCodeForToken(code);
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', handleUrl);
+
+    // Handle case where app was cold-started via the OAuth redirect
+    Linking.getInitialURL().then((url) => {
+      if (url && url.startsWith('one-demo-app://oauth/callback')) {
+        const code = parseCode(url);
+        if (code) exchangeCodeForToken(code);
+      }
+    });
+
+    return () => subscription.remove();
   }, []);
 
   const exchangeCodeForToken = async (authCode) => {
@@ -356,15 +373,14 @@ const openWhoopProfileModal=()=>{
       )}
 
   {!accessToken && (
-          <View style={{flex:1, justifyContent:'center',alignItems:'center'}}>
-            <Button title="Connect WHOOP" onPress={() => promptAsync()} />
-            <Text style={{ color: 'white', fontSize: 14 }}>
-            Redirect URI: {REDIRECT_URI}
-          </Text>
+          <View style={styles.connectContainer}>
             <Image
-          source={require('../assets/whoop-logo-white.png')}
-          style={styles.logo}
-        />
+              source={require('../assets/whoop-logo-white.png')}
+              style={styles.connectLogo}
+            />
+            <TouchableOpacity style={styles.connectButton} onPress={handleOAuthLogin}>
+              <Text style={styles.connectButtonText}>Connect to WHOOP</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -828,6 +844,29 @@ sleepSubtitle: {
     fontWeight: "bold",
     color: "white",
     // marginBottom: 10,
+  },
+  connectContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  connectLogo: {
+    width: 220,
+    resizeMode: 'contain',
+    marginBottom: 60,
+  },
+  connectButton: {
+    backgroundColor: '#32d2d6',
+    paddingHorizontal: 44,
+    paddingVertical: 16,
+    borderRadius: 30,
+  },
+  connectButtonText: {
+    color: '#101518',
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
 });
 

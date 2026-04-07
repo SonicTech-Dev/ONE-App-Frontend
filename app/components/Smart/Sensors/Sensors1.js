@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function SensorModal({ visible, onClose, device, deviceStatus }) {
   let temperature = "unknown";
@@ -7,7 +7,6 @@ export default function SensorModal({ visible, onClose, device, deviceStatus }) 
   let alarmState = "unknown";
   let battery = undefined; // Set to undefined if not present
   let online = null;
-  let deviceImage = null;
   let deviceType = "";
   let productName = "";
 
@@ -59,7 +58,6 @@ export default function SensorModal({ visible, onClose, device, deviceStatus }) 
       battery = batteryAbility.state;
     }
 
-    deviceImage = deviceStatus.result.device_picture_url || null; // LAN API: always null/undefined
     online = deviceStatus.result.online;
     deviceType = deviceStatus.result.device_type || "";
     // Prefer product_name, fall back to device_name (LAN)
@@ -88,9 +86,6 @@ export default function SensorModal({ visible, onClose, device, deviceStatus }) 
           </TouchableOpacity>
 
           <Text style={styles.title}>{device?.title || productName || deviceType}</Text>
-          {deviceImage ? (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          ) : null}
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -186,14 +181,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     color: '#ffffff',
-  },
-  deviceImage: {
-    width: 200,
-    height: 200,
-    marginBottom: 32,
-    borderRadius: 10,
-    resizeMode: 'contain',
-    backgroundColor: '#f0f0f0',
   },
   statusContainer: {
     width: '100%',

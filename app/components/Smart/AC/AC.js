@@ -556,7 +556,7 @@ const sliderStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#32d2d6',
   },
-  tempValue: { fontSize: 40, fontWeight: '800', color: '#ffffff', includeFontPadding: false },
+  tempValue: { fontSize: 34, fontWeight: '800', color: '#ffffff', includeFontPadding: false },
   tempButton: {
     width: 50,
     height: 50,

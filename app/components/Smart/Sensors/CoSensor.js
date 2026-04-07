@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function CoSensorModal({ visible, onClose, device, deviceStatus }) {
   // Handles both WAN and LAN style responses and different ability names/orderings
@@ -8,7 +8,6 @@ export default function CoSensorModal({ visible, onClose, device, deviceStatus }
   let coState = "unknown";
   let battery = undefined;
   let online = null;
-  let deviceImage = null;
 
   // Support both WAN and LAN-style response
   const result = deviceStatus?.result || deviceStatus;
@@ -52,7 +51,6 @@ export default function CoSensorModal({ visible, onClose, device, deviceStatus }
     battery = batteryAbility.state;
   }
 
-  deviceImage = result?.device_picture_url || device?.device_picture_url || null;
   online = result?.online;
 
   return (
@@ -69,9 +67,6 @@ export default function CoSensorModal({ visible, onClose, device, deviceStatus }
           </TouchableOpacity>
 
           <Text style={styles.title}>{device?.device_name || result?.device_name || result?.product_name}</Text>
-          {deviceImage ? (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          ) : null}
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -149,13 +144,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     color: '#ffffff',
-  },
-  deviceImage: {
-    width: 90,
-    height: 90,
-    marginBottom: 10,
-    borderRadius: 10,
-    resizeMode: 'contain',
   },
   statusContainer: {
     width: '100%',

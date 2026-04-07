@@ -107,18 +107,24 @@ const MenuDrawer = ({ visible, onClose, items, onProfilePress }) => {
           </TouchableOpacity> */}
           <View style={{marginTop:10}}/>
           {items.map((item, index) => (
-            <>
-            <TouchableOpacity key={index} onPress={item.onPress} 
-            style={{marginHorizontal:10, marginVertical:5, flexDirection:'row', justifyContent:'flex-start', alignItems:'center'}}>
-              <View style={{marginRight:10}}>
+            <React.Fragment key={index}>
+            <TouchableOpacity
+              onPress={item.onPress}
+              style={styles.drawerItemRow}
+            >
+              <View style={styles.drawerItemIcon}>
                 {item.Icon}
-                </View>
-                <View>
-                  <Text style={[styles.drawerItem,{color:index===items.length-1?colors.danger:colors.black}]}>{item.name}</Text>
-                </View>
+              </View>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.drawerItem, {color: index === items.length - 1 ? colors.danger : '#1a1a1a'}]}
+              >
+                {item.name}
+              </Text>
               </TouchableOpacity>
-              <View style={{width: "100%", height:0.5,opacity:0.25,backgroundColor:colors.medium}}/>
-            </>
+              <View style={[styles.drawerDivider, { backgroundColor: colors.medium }]}/>
+            </React.Fragment>
           ))}
         </Animated.View>
       </View>
@@ -160,8 +166,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   drawerItem: {
+    flex: 1,
     fontSize: 16,
-    marginVertical: 10,
+    color: '#1a1a1a',
+    fontWeight: '500',
+  },
+  drawerItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  drawerItemIcon: {
+    marginRight: 12,
+    width: 30,
+    alignItems: 'center',
+  },
+  drawerDivider: {
+    width: '100%',
+    height: 0.5,
+    opacity: 0.25,
   },
 });
 

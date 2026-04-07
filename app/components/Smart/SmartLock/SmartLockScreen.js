@@ -12,8 +12,23 @@ import {
   UIManager,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Screen from '../../Screen';
 import useColors from '../../../hooks/useColors';
+
+const DEVICE_IP_CACHE_KEY = '@smartlock_device_ip';
+
+/** Extracts host IP from any rtsp://host:port/... or rtsp://user:pass@host:port/... URL */
+function extractIpFromRtspUrl(rtspUrl) {
+  if (!rtspUrl) return null;
+  // Strip credentials if present (rtsp://user:pass@host:port/...)
+  const withoutScheme = rtspUrl.replace(/^rtsp:\/\//i, '');
+  const hostPart = withoutScheme.includes('@')
+    ? withoutScheme.split('@')[1]
+    : withoutScheme;
+  const ip = hostPart.split(':')[0].split('/')[0];
+  return ip || null;
+}
 
 const { Akuvox } = NativeModules;
 
@@ -41,11 +56,14 @@ function checkMethod(name) {
 export default function SmartLockScreen() {
   const colors = useColors();
 
-  // Device config
-  const residenceId = 'r45844047053e43d78fe5272c5badbd3a';
-  const userId = 'a9b41de81c3284515a5e833d53412fe14';
-  const deviceId = 'db8cbfe10650e484d800b2a0a7b07fd78';
-  const deviceIp = '192.168.2.100';
+  // Device config — IDs are fixed per residence, IP is resolved automatically
+  const residenceId = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82';
+  const userId     = 'a9b41de81c3284515a5e833d53412fe14';
+  const deviceId   = 'd037c3fbf41044244bbc1af4d0ffb74a9';
+
+  // IP is NOT hardcoded — loaded from cache (written by SDK after first connect)
+  const [deviceIp, setDeviceIp] = useState(null);
+  const [detectedIp, setDetectedIp] = useState(null); // IP confirmed by SDK via rtspUrl
 
   // UI state
   const [isMonitoring, setIsMonitoring] = useState(false);
@@ -81,8 +99,9 @@ export default function SmartLockScreen() {
     }
   }, []);
 
-  function handleInitLockConfig() {
-    safeCall('initLockConfig', [residenceId, userId, deviceId, deviceIp], 'Lock initialization failed');
+  function handleInitLockConfig(ip) {
+    console.log('[SmartLock] initLockConfig → deviceIp:', ip);
+    safeCall('initLockConfig', [residenceId, userId, deviceId, ip], 'Lock initialization failed');
   }
 
   const handleUnlock = () => {
@@ -96,8 +115,45 @@ export default function SmartLockScreen() {
     );
   };
 
+  // ── Step 1: load cached IP from last successful SDK connection ──────────
   useEffect(() => {
-    handleInitLockConfig();
+    AsyncStorage.getItem(DEVICE_IP_CACHE_KEY).then((cached) => {
+      if (cached) {
+        console.log('[SmartLock] Loaded cached device IP from AsyncStorage:', cached);
+        setDeviceIp(cached);
+      } else {
+        console.warn('[SmartLock] No cached device IP found. Connect once to auto-detect it.');
+        // Without a cached IP the SDK cannot probe the device.
+        // The first connection must be seeded — prompt or configure manually.
+        Alert.alert(
+          'Device IP Unknown',
+          'No device IP has been detected yet. Please enter the lock\'s local IP to connect for the first time.',
+          [
+            {
+              text: 'Enter IP',
+              onPress: () => {
+                // Simple prompt fallback for first-time setup
+                Alert.prompt
+                  ? Alert.prompt('Device IP', 'Enter the lock IP (e.g. 192.168.2.102)', (ip) => {
+                      if (ip) {
+                        console.log('[SmartLock] User entered IP for first-time setup:', ip);
+                        setDeviceIp(ip);
+                      }
+                    })
+                  : setDeviceIp('192.168.2.102'); // Android doesn't support Alert.prompt — keep fallback
+              },
+            },
+          ]
+        );
+      }
+    });
+  }, []);
+
+  // ── Step 2: once IP is known, start the SDK ──────────────────────────────
+  useEffect(() => {
+    if (!deviceIp) return;
+
+    handleInitLockConfig(deviceIp);
 
     const eventEmitter = new NativeEventEmitter(Akuvox);
 
@@ -107,6 +163,18 @@ export default function SmartLockScreen() {
 
     const lanSub = eventEmitter.addListener('onSmartLockRtsp', async (event) => {
       if (event?.status === 'rtspReady' && event.rtspUrl) {
+        // ── Auto-detect and cache device IP from SDK-delivered rtspUrl ──
+        const sdkIp = extractIpFromRtspUrl(event.rtspUrl);
+        if (sdkIp) {
+          console.log('[SmartLock] SDK auto-detected device IP from rtspUrl:', sdkIp);
+          console.log('[SmartLock] Full rtspUrl from SDK:', event.rtspUrl);
+          setDetectedIp(sdkIp);
+          if (sdkIp !== deviceIp) {
+            console.log('[SmartLock] IP updated:', deviceIp, '→', sdkIp, '(saving to cache)');
+          }
+          await AsyncStorage.setItem(DEVICE_IP_CACHE_KEY, sdkIp);
+        }
+
         setLoading(true);
         const res = await safePromiseCall(
           'startMonitorViaLAN',
@@ -159,7 +227,7 @@ export default function SmartLockScreen() {
       safeCall('clearRtspMessageListener', []);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [deviceIp]);
 
   const renderVideoArea = () => {
     if (isMonitoring && monitorId && monitorId > 0) {
@@ -191,6 +259,15 @@ export default function SmartLockScreen() {
           <View style={[styles.metaChip, styles.metaChipSoft]}>
             <Text style={styles.metaTextSoft}>{isMonitoring ? 'Live' : 'Standby'}</Text>
           </View>
+          {detectedIp ? (
+            <View style={[styles.metaChip, { borderColor: '#b8f5c8' }]}>
+              <Text style={[styles.metaText, { color: '#1a7a3a' }]}>IP: {detectedIp}</Text>
+            </View>
+          ) : deviceIp ? (
+            <View style={[styles.metaChip, { borderColor: '#fde68a' }]}>
+              <Text style={[styles.metaText, { color: '#92400e' }]}>IP: {deviceIp} (cached)</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.lockCard}>

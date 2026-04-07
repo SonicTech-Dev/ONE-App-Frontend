@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function SmartValveModal({
   visible,
@@ -12,7 +12,6 @@ export default function SmartValveModal({
   // State for valve and device status
   const [valveState, setValveState] = useState("unknown");
   const [online, setOnline] = useState(null);
-  const [deviceImage, setDeviceImage] = useState(null);
   const [productName, setProductName] = useState("");
   const [deviceType, setDeviceType] = useState("");
   const [loading, setLoading] = useState(true);
@@ -45,7 +44,6 @@ export default function SmartValveModal({
           ? switchAbility.state
           : "unknown"
       );
-      setDeviceImage(result.device_picture_url || null);
       setOnline(result.online);
       setDeviceType(result.device_type || "");
       setProductName(result.product_name || result.device_name || "");
@@ -53,7 +51,6 @@ export default function SmartValveModal({
       setLoading(true);
       setValveState("unknown");
       setOnline(null);
-      setDeviceImage(null);
       setDeviceType("");
       setProductName("");
     }
@@ -76,11 +73,8 @@ export default function SmartValveModal({
             <Text style={{ fontSize: 22 }}>✕</Text>
           </TouchableOpacity>
 
-          {/* Title & Image */}
+          {/* Title */}
           <Text style={styles.title}>{deviceLabel}</Text>
-          {deviceImage && (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          )}
 
           {/* Status display */}
           {loading ? (
@@ -168,14 +162,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 16,
     textAlign: 'center',
-  },
-  deviceImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    borderRadius: 10,
-    resizeMode: 'contain',
-    backgroundColor: '#f0f0f0',
   },
   statusContainer: {
     width: '100%',

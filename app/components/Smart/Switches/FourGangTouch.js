@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function FourGangSwitchSingleModal({
   visible,
@@ -25,7 +25,6 @@ export default function FourGangSwitchSingleModal({
     : "unknown";
 
   const online = deviceStatus?.result?.online;
-  const deviceImage = deviceStatus?.result?.device_picture_url || null;
 
   return (
     <Modal
@@ -41,9 +40,6 @@ export default function FourGangSwitchSingleModal({
           </TouchableOpacity>
 
           <Text style={styles.title}>{device?.device_name}</Text>
-          {deviceImage && (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          )}
 
           <Text style={styles.switchLabel}>{switchDeviceName}</Text>
 
@@ -140,13 +136,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     color: '#ffffff',
-  },
-  deviceImage: {
-    width: 90,
-    height: 90,
-    marginBottom: 10,
-    borderRadius: 10,
-    resizeMode: 'contain',
   },
   switchLabel: {
     fontSize: 18,

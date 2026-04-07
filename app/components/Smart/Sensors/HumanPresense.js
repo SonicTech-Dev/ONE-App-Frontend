@@ -1,14 +1,12 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function OccupancySensorModal({ visible, onClose, device, deviceStatus }) {
   let online = null;
-  let deviceImage = null;
   let deviceType = "";
   let productName = "";
 
   if (deviceStatus && deviceStatus.result) {
-    deviceImage = deviceStatus.result.device_picture_url || null;
     online = deviceStatus.result.online;
     deviceType = deviceStatus.result.device_type || "";
     productName = deviceStatus.result.product_name || deviceStatus.result.device_name || "";
@@ -28,9 +26,6 @@ export default function OccupancySensorModal({ visible, onClose, device, deviceS
           </TouchableOpacity>
 
           <Text style={styles.title}>{device?.title || productName || deviceType}</Text>
-          {deviceImage ? (
-            <Image source={{ uri: deviceImage }} style={styles.deviceImage} />
-          ) : null}
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -96,13 +91,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     color: '#ffffff',
-  },
-  deviceImage: {
-    width: 90,
-    height: 90,
-    marginBottom: 10,
-    borderRadius: 10,
-    resizeMode: 'contain',
   },
   statusContainer: {
     width: '100%',

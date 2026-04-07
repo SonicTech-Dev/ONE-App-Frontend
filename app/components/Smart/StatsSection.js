@@ -44,9 +44,11 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
           style={styles.actionButtonWrapper} 
           onPress={() => navigation.navigate('IntercomScreen', {
             selectedOption,
-            deviceId: '0C11052C6E92',
+            // onsite deviceId: '0C11052C6E92',
+            deviceId: '0C11052C6E79',
             lanRtspUrl: 'rtsp://admin:Sonic123@192.168.2.114:',
-            wanRtspUrl: 'rtsp://user:J19IE753w25867v6@35.156.199.213:554/0C11052C6E92',
+            // onsite wanRtspUrl: 'rtsp://user:J19IE753w25867v6@35.156.199.213:554/0C11052C6E92',
+            wanRtspUrl: "rtsp://user:nj1770Lx791a70r5@35.156.199.213:554/0C11052C6E79",
             LAN_HEADERS: lanHeaders
           })}
           activeOpacity={0.7}
