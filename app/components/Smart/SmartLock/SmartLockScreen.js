@@ -12,11 +12,11 @@ import {
   UIManager,
   Platform,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Screen from '../../Screen';
 import useColors from '../../../hooks/useColors';
 
-const DEVICE_IP_CACHE_KEY = '@smartlock_device_ip';
+const DEVICE_IP = '192.168.2.102';
+let sdkInitialized = false; // module-level guard so initSdk is only called once
 
 /** Extracts host IP from any rtsp://host:port/... or rtsp://user:pass@host:port/... URL */
 function extractIpFromRtspUrl(rtspUrl) {
@@ -59,18 +59,20 @@ export default function SmartLockScreen() {
   // Device config — IDs are fixed per residence, IP is resolved automatically
   const residenceId = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82';
   const userId     = 'a9b41de81c3284515a5e833d53412fe14';
-  const deviceId   = 'd037c3fbf41044244bbc1af4d0ffb74a9';
+  const deviceId   = 'da1c171e3a276417fb2212f0abb2de46f';
 
   // IP is NOT hardcoded — loaded from cache (written by SDK after first connect)
-  const [deviceIp, setDeviceIp] = useState(null);
+  const [deviceIp, setDeviceIp] = useState(DEVICE_IP);
   const [detectedIp, setDetectedIp] = useState(null); // IP confirmed by SDK via rtspUrl
 
   // UI state
+  const [isReady, setIsReady] = useState(false);   // true once initLockConfig delay passes
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [monitorId, setMonitorId] = useState(null);
   const [unlockStatus, setUnlockStatus] = useState(null);
   const [videoError, setVideoError] = useState('');
   const [loading, setLoading] = useState(false);
+  const cleanupRef = React.useRef(null);
 
   const safePromiseCall = useCallback(async (fn, args = [], alertMsg = '', onError = () => {}) => {
     try {
@@ -105,124 +107,110 @@ export default function SmartLockScreen() {
   }
 
   const handleUnlock = () => {
+    if (!isReady) return;
     safeCall(
       'unlockViaLAN',
       [deviceId, (success) => {
         setUnlockStatus(success ? 'Unlocked' : 'Unlock failed');
-        Alert.alert(success ? 'Door unlocked' : 'Unlock failed');
+        console.log('[SmartLock] unlockViaLAN result:', success);
       }],
       'Failed to trigger door unlock'
     );
   };
 
-  // ── Step 1: load cached IP from last successful SDK connection ──────────
-  useEffect(() => {
-    AsyncStorage.getItem(DEVICE_IP_CACHE_KEY).then((cached) => {
-      if (cached) {
-        console.log('[SmartLock] Loaded cached device IP from AsyncStorage:', cached);
-        setDeviceIp(cached);
-      } else {
-        console.warn('[SmartLock] No cached device IP found. Connect once to auto-detect it.');
-        // Without a cached IP the SDK cannot probe the device.
-        // The first connection must be seeded — prompt or configure manually.
-        Alert.alert(
-          'Device IP Unknown',
-          'No device IP has been detected yet. Please enter the lock\'s local IP to connect for the first time.',
-          [
-            {
-              text: 'Enter IP',
-              onPress: () => {
-                // Simple prompt fallback for first-time setup
-                Alert.prompt
-                  ? Alert.prompt('Device IP', 'Enter the lock IP (e.g. 192.168.2.102)', (ip) => {
-                      if (ip) {
-                        console.log('[SmartLock] User entered IP for first-time setup:', ip);
-                        setDeviceIp(ip);
-                      }
-                    })
-                  : setDeviceIp('192.168.2.102'); // Android doesn't support Alert.prompt — keep fallback
-              },
-            },
-          ]
-        );
-      }
-    });
-  }, []);
-
-  // ── Step 2: once IP is known, start the SDK ──────────────────────────────
+  // ── Step 1: once IP is known, start the SDK ──────────────────────────────
   useEffect(() => {
     if (!deviceIp) return;
+    let mounted = true;
+
+    // Ensure the global SDK (ISipMessageListener) is initialised in this process.
+    // SmartScreen normally does this, but guard here so it always runs.
+    if (!sdkInitialized) {
+      try {
+        checkMethod('initSdk');
+        Akuvox.initSdk();
+        sdkInitialized = true;
+        console.log('[SmartLock] initSdk called from SmartLockScreen');
+      } catch (e) {
+        console.warn('[SmartLock] initSdk error:', e);
+      }
+    }
 
     handleInitLockConfig(deviceIp);
 
-    const eventEmitter = new NativeEventEmitter(Akuvox);
+    // Give the SDK time to establish its internal connection to the device.
+    // initLockConfig is synchronous on the JS side but async inside the SDK.
+    const initDelay = setTimeout(() => {
+      if (!mounted) return;
+      setIsReady(true);
 
-    // Register RTSP listener and kick off monitor handshake
-    safeCall('setRtspMessageListener', [deviceId, userId], 'Failed to set RTSP listener');
-    safeCall('prepareVideoStart', [deviceId], 'Failed to prepare video start');
+      const eventEmitter = new NativeEventEmitter(Akuvox);
 
-    const lanSub = eventEmitter.addListener('onSmartLockRtsp', async (event) => {
-      if (event?.status === 'rtspReady' && event.rtspUrl) {
-        // ── Auto-detect and cache device IP from SDK-delivered rtspUrl ──
-        const sdkIp = extractIpFromRtspUrl(event.rtspUrl);
-        if (sdkIp) {
-          console.log('[SmartLock] SDK auto-detected device IP from rtspUrl:', sdkIp);
-          console.log('[SmartLock] Full rtspUrl from SDK:', event.rtspUrl);
-          setDetectedIp(sdkIp);
-          if (sdkIp !== deviceIp) {
-            console.log('[SmartLock] IP updated:', deviceIp, '→', sdkIp, '(saving to cache)');
+      // Register RTSP listener and kick off monitor handshake
+      safeCall('setRtspMessageListener', [deviceId, userId], 'Failed to set RTSP listener');
+      safeCall('prepareVideoStart', [deviceId], 'Failed to prepare video start');
+
+      const lanSub = eventEmitter.addListener('onSmartLockRtsp', async (event) => {
+        if (event?.status === 'rtspReady' && event.rtspUrl) {
+          const sdkIp = extractIpFromRtspUrl(event.rtspUrl);
+          if (sdkIp) {
+            console.log('[SmartLock] SDK detected IP from rtspUrl:', sdkIp);
+            setDetectedIp(sdkIp);
           }
-          await AsyncStorage.setItem(DEVICE_IP_CACHE_KEY, sdkIp);
+          setLoading(true);
+          const res = await safePromiseCall(
+            'startMonitorViaLAN',
+            [event.rtspUrl, deviceId],
+            'Failed to start LAN monitoring'
+          );
+          setLoading(false);
+          if (!res || !res.monitorId || res.monitorId <= 0) {
+            setVideoError('Failed to start LAN monitor');
+          }
         }
-
-        setLoading(true);
-        const res = await safePromiseCall(
-          'startMonitorViaLAN',
-          [event.rtspUrl, deviceId],
-          'Failed to start LAN monitoring'
-        );
-        setLoading(false);
-        if (!res || !res.monitorId || res.monitorId <= 0) {
-          setVideoError('Failed to start LAN monitor');
+        if (event?.status === 'rtspStop') {
+          setIsMonitoring(false);
+          setMonitorId(null);
+          setLoading(false);
         }
-      }
-      if (event?.status === 'rtspStop') {
-        setIsMonitoring(false);
-        setMonitorId(null);
-        setLoading(false);
-      }
-    });
+      });
 
-    const establishedSub = eventEmitter.addListener('onMonitorEstablished', (event) => {
-      if (event?.monitorId > 0) {
-        setIsMonitoring(true);
-        setVideoError('');
-        setMonitorId(event.monitorId);
-      }
-    });
+      const establishedSub = eventEmitter.addListener('onMonitorEstablished', (event) => {
+        if (event?.monitorId > 0) {
+          setIsMonitoring(true);
+          setVideoError('');
+          setMonitorId(event.monitorId);
+        }
+      });
 
-    const surfaceViewSub = eventEmitter.addListener('onMonitorLoadSurfaceView', (event) => {
-      if (event?.monitorId > 0) {
-        // Force re-attachment of the native view
-        setMonitorId(-1);
-        setTimeout(() => setMonitorId(event.monitorId), 0);
-      }
-    });
+      const surfaceViewSub = eventEmitter.addListener('onMonitorLoadSurfaceView', (event) => {
+        if (event?.monitorId > 0) {
+          setMonitorId(-1);
+          setTimeout(() => setMonitorId(event.monitorId), 0);
+        }
+      });
 
-    const rtspErrorSub = eventEmitter.addListener('onRtspError', (event) => {
-      setVideoError(`RTSP error: ${event?.error || 'Unknown error'}`);
-    });
+      const rtspErrorSub = eventEmitter.addListener('onRtspError', (event) => {
+        setVideoError(`RTSP error: ${event?.error || 'Unknown error'}`);
+      });
+
+      // inner cleanup returned from the timeout callback is not called automatically
+      // so we store refs for the outer cleanup to use
+      cleanupRef.current = () => {
+        try {
+          lanSub.remove();
+          establishedSub.remove();
+          surfaceViewSub.remove();
+          rtspErrorSub.remove();
+        } catch {}
+      };
+    }, 600);
 
     return () => {
-      try {
-        lanSub.remove();
-        establishedSub.remove();
-        surfaceViewSub.remove();
-        rtspErrorSub.remove();
-      } catch {}
-      if (monitorId && monitorId > 0) {
-        safeCall('finishMonitor', [monitorId]);
-      }
+      mounted = false;
+      clearTimeout(initDelay);
+      if (cleanupRef.current) cleanupRef.current();
+      if (monitorId && monitorId > 0) safeCall('finishMonitor', [monitorId]);
       safeCall('stopVideoViaLAN', [deviceId]);
       safeCall('clearRtspMessageListener', []);
     };
@@ -232,7 +220,7 @@ export default function SmartLockScreen() {
   const renderVideoArea = () => {
     if (isMonitoring && monitorId && monitorId > 0) {
       return (
-        <View style={[styles.videoContainer, { backgroundColor: colors.dark }] }>
+        <View style={[styles.videoContainer, { backgroundColor: colors.dark }]}>
           <SmartLockMonitorView style={styles.nativeVideo} monitorId={monitorId} />
           <Text style={styles.monitorType}>LAN Monitoring</Text>
           {videoError ? <Text style={styles.videoError}>{videoError}</Text> : null}
@@ -273,8 +261,13 @@ export default function SmartLockScreen() {
         <View style={styles.lockCard}>
           <Text style={styles.lockCardTitle}>Entrance Door</Text>
           <Text style={styles.lockSubtitle}>Control access and monitor the live lock camera feed.</Text>
-          <TouchableOpacity style={styles.unlockButton} onPress={handleUnlock} activeOpacity={0.85}>
-            <Text style={styles.unlockButtonText}>Unlock</Text>
+          <TouchableOpacity
+            style={[styles.unlockButton, !isReady && styles.unlockButtonDisabled]}
+            onPress={handleUnlock}
+            activeOpacity={0.85}
+            disabled={!isReady}
+          >
+            <Text style={styles.unlockButtonText}>{isReady ? 'Unlock' : 'Connecting...'}</Text>
           </TouchableOpacity>
           {unlockStatus ? (
             <View style={[styles.statusBadge, unlockStatus === 'Unlocked' ? styles.statusSuccess : styles.statusError]}>
@@ -349,6 +342,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 10,
     elevation: 4,
+  },
+  unlockButtonDisabled: {
+    backgroundColor: '#b3a0e8',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   unlockButtonText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.4 },
   statusBadge: {

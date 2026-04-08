@@ -22,15 +22,16 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const checkPersistedAuth = async () => {
       try {
-        const storedLan = await AsyncStorage.getItem('lanToken');
-        const storedWan = await AsyncStorage.getItem('wanToken');
         const storedMode = await AsyncStorage.getItem('networkMode') || 'WAN';
         // Manage the currently active session explicitly
         const activeEmail = await AsyncStorage.getItem('activeEmail');
         const activePassword = await AsyncStorage.getItem('activePassword');
-        
-        if (storedLan) setLanToken(storedLan);
-        if (storedWan) setWanToken(storedWan);
+
+        // Do not restore old access tokens across launches.
+        // They can be expired and cause immediate 401/unauthorized errors on startup.
+        await AsyncStorage.multiRemove(['lanToken', 'wanToken']);
+        setLanToken(null);
+        setWanToken(null);
         setNetworkMode(storedMode);
         
         if (activeEmail && activePassword) {
@@ -102,8 +103,8 @@ export function AuthProvider({ children }) {
   };
 
   /** Dynamically grabs from cache instantly, or fetches from Network exactly 1 time! */
-  const getActiveLanToken = async () => {
-    if (lanToken) return lanToken;
+  const getActiveLanToken = async (forceRefresh = false) => {
+    if (lanToken && !forceRefresh) return lanToken;
     if (!userCredentials) throw new Error("No offline credentials available.");
     const token = await fetchLanToken(userCredentials.email, userCredentials.password);
     setLanToken(token);
@@ -111,8 +112,8 @@ export function AuthProvider({ children }) {
     return token;
   };
 
-  const getActiveWanToken = async () => {
-    if (wanToken) return wanToken;
+  const getActiveWanToken = async (forceRefresh = false) => {
+    if (wanToken && !forceRefresh) return wanToken;
     if (!userCredentials) throw new Error("No offline credentials available.");
     const token = await fetchWanToken(userCredentials.email, userCredentials.password);
     setWanToken(token);

@@ -19,12 +19,12 @@ import { NetworkInfo } from 'react-native-network-info';
 const { Akuvox } = NativeModules;
 
 // Reuse the same auth strings you had in Contacts screen
-const WAN_SIP_TOKEN =
-  'q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9ydX3MDyvYiKsuodonqmKjAg3PpmfEezF76tQNBNbDBztjSHe+Nkz8Yb01jkqtln2qdX8FKQyk/Rzza1ZYAjJzS6DBgcGhLNpwPz7jrjOF1v';
+//const WAN_SIP_TOKEN =
+//  'q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9ydX3MDyvYiKsuodonqmKjAg3PpmfEezF76tQNBNbDBztjSHe+Nkz8Yb01jkqtln2qdX8FKQyk/Rzza1ZYAjJzS6DBgcGhLNpwPz7jrjOF1v';
+const WAN_SIP_TOKEN = 
+  'q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9xcrxcPwelBSlsZ3luA5ZPOmeyL16bsOfJEaEILROCMsRgWMjeLxk3BzHkaAibdIAnBlVccvrNx5+H/ahFubwD3o0qWKykhUxhfWnGYvll4X';
 const LAN_SIP_TOKEN =
   '4cUSgR92G0HEVtdqewd7AT4zS22YVQVM1/7OlVH7QnsnwtqrXdLYVtz8poL/nhWnUEVM7QTea2rWri23BdQHUxyhWOz3IuzWo9o/S3hS93c=';
-
-// Permissions helper (Android)
 async function requestPermissionsIfNeeded() {
   if (Platform.OS === 'android') {
     const camera = PermissionsAndroid.PERMISSIONS.CAMERA;
@@ -140,7 +140,7 @@ export default function SmartScreen({ navigation }) {
         } else if (selectedOption === 'WAN') {
           if (lastRegisteredTransport !== 'wan') {
             console.log('[SmartScreen] Registering SIP via WAN...');
-            const res = await Akuvox.registerSip(WAN_SIP_TOKEN, 'Laguna Mockup One-Development');
+            const res = await Akuvox.registerSip(WAN_SIP_TOKEN, 'fayis flying');
             console.log('[SmartScreen] WAN register result:', res);
             setLastRegisteredTransport('wan');
             await AsyncStorage.setItem('registeredTransport', 'wan');
