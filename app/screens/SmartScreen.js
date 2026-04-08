@@ -18,13 +18,81 @@ import { NetworkInfo } from 'react-native-network-info';
 
 const { Akuvox } = NativeModules;
 
-// Reuse the same auth strings you had in Contacts screen
-//const WAN_SIP_TOKEN =
-//  'q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9ydX3MDyvYiKsuodonqmKjAg3PpmfEezF76tQNBNbDBztjSHe+Nkz8Yb01jkqtln2qdX8FKQyk/Rzza1ZYAjJzS6DBgcGhLNpwPz7jrjOF1v';
-const WAN_SIP_TOKEN = 
-  'q5sa4p2gwMD6DYkkixg75l/bymQWSz8kPiFiXSNwJflACaNIDR7+4ykJfHCTkZ8tRR0AIePjUBrV+qSskC7F2AYBWO30e198FGr187+vEdDVp0Y8AghGBK6pPe2GVLi9SDMf3OQkPfqyaxTlOLKn9xcrxcPwelBSlsZ3luA5ZPOmeyL16bsOfJEaEILROCMsRgWMjeLxk3BzHkaAibdIAnBlVccvrNx5+H/ahFubwD3o0qWKykhUxhfWnGYvll4X';
-const LAN_SIP_TOKEN =
-  '4cUSgR92G0HEVtdqewd7AT4zS22YVQVM1/7OlVH7QnsnwtqrXdLYVtz8poL/nhWnUEVM7QTea2rWri23BdQHUxyhWOz3IuzWo9o/S3hS93c=';
+// SIP credential API constants
+const SIP_REQUEST_ID = 'c45e846ca23ab42c9ae469d988ae32a96';
+const SIP_RESIDENCE_ID = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82';
+
+async function fetchWanSipCredentials(wanToken) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${wanToken}`,
+  };
+
+  // Fetch display name from account_info
+  const accountRes = await fetch('https://one-development.soniciot.com/account_info/', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ command: 'get_account_info', id: SIP_REQUEST_ID, param: {} }),
+  });
+  const accountData = await accountRes.json();
+  const firstName = accountData?.result?.first_name || '';
+  const lastName = accountData?.result?.last_name || '';
+  const displayName = `${firstName} ${lastName}`.trim();
+
+  // Fetch SIP ciphertext from contact_list
+  const contactRes = await fetch('https://one-development.soniciot.com/contact_list/', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      command: 'get_contact_list',
+      id: SIP_REQUEST_ID,
+      param: { residence_id: SIP_RESIDENCE_ID, show_ability: true },
+    }),
+  });
+  const contactData = await contactRes.json();
+  const sipToken = contactData?.result?.ciphertext;
+
+  console.log('[WAN SIP] displayName:', displayName);
+  console.log('[WAN SIP] ciphertext:', sipToken);
+
+  return { sipToken, displayName };
+}
+
+async function fetchLanSipCredentials(lanToken) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${lanToken}`,
+  };
+  const baseUrl = 'http://192.168.2.115/api/v1.0/account';
+
+  // Fetch SIP register info
+  const sipRes = await fetch(baseUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ command: 'get_sip_register_info', id: SIP_REQUEST_ID, param: {} }),
+  });
+  const sipData = await sipRes.json();
+  const sipToken = sipData?.result?.sip_info;
+
+  // Fetch display name from account_info
+  const accountRes = await fetch(baseUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ command: 'get_account_info', id: SIP_REQUEST_ID, param: {} }),
+  });
+  const accountData = await accountRes.json();
+  const firstName = accountData?.result?.first_name || '';
+  const lastName = accountData?.result?.last_name || '';
+  const displayName = `${firstName} ${lastName}`.trim();
+
+  console.log('[LAN SIP] displayName:', displayName);
+  console.log('[LAN SIP] sip_info (ciphertext):', sipToken);
+
+  return { sipToken, displayName };
+}
+
 async function requestPermissionsIfNeeded() {
   if (Platform.OS === 'android') {
     const camera = PermissionsAndroid.PERMISSIONS.CAMERA;
@@ -128,8 +196,11 @@ export default function SmartScreen({ navigation }) {
       try {
         if (selectedOption === 'LAN') {
           if (lastRegisteredTransport !== 'lan') {
-            console.log('[SmartScreen] Registering SIP via LAN...');
-            const res = await Akuvox.registerSipLan(LAN_SIP_TOKEN, 'Laguna Mockup One-Development');
+            console.log('[SmartScreen] Fetching LAN SIP credentials...');
+            const lanToken = await getActiveLanToken();
+            const { sipToken: lanSipToken, displayName: lanDisplayName } = await fetchLanSipCredentials(lanToken);
+            console.log('[SmartScreen] Registering SIP via LAN, display name:', lanDisplayName);
+            const res = await Akuvox.registerSipLan(lanSipToken, lanDisplayName);
             console.log('[SmartScreen] LAN register result:', res);
             setLastRegisteredTransport('lan');
             await AsyncStorage.setItem('registeredTransport', 'lan');
@@ -139,8 +210,11 @@ export default function SmartScreen({ navigation }) {
           }
         } else if (selectedOption === 'WAN') {
           if (lastRegisteredTransport !== 'wan') {
-            console.log('[SmartScreen] Registering SIP via WAN...');
-            const res = await Akuvox.registerSip(WAN_SIP_TOKEN, 'fayis flying');
+            console.log('[SmartScreen] Fetching WAN SIP credentials...');
+            const wanToken = await getActiveWanToken();
+            const { sipToken: wanSipToken, displayName: wanDisplayName } = await fetchWanSipCredentials(wanToken);
+            console.log('[SmartScreen] Registering SIP via WAN, display name:', wanDisplayName);
+            const res = await Akuvox.registerSip(wanSipToken, wanDisplayName);
             console.log('[SmartScreen] WAN register result:', res);
             setLastRegisteredTransport('wan');
             await AsyncStorage.setItem('registeredTransport', 'wan');
