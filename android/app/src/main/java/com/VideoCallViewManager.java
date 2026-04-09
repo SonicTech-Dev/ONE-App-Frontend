@@ -1,7 +1,7 @@
 package com.oneapp;
 
-import android.content.Context;
 import android.app.Activity;
+import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -14,18 +14,25 @@ import com.facebook.react.uimanager.annotations.ReactProp;
 
 /**
  * VideoCallViewManager for React Native <VideoCallView/>
- * Handles both local and remote video views for calls.
- * Only attaches SurfaceView after call is active and props are set.
+ *
+ * Attaches the SDK-managed SurfaceView for local/remote video directly in
+ * the @ReactProp setters (synchronous, same approach as the known-working
+ * fd84ee8 commit).  If the SDK view is not ready yet (null), we retry every
+ * RETRY_DELAY_MS up to MAX_RETRIES times so we handle the camera warm-up
+ * period without blocking the UI thread.
  */
 public class VideoCallViewManager extends SimpleViewManager<VideoCallViewManager.VideoCallFrameLayout> {
     public static final String REACT_CLASS = "VideoCallView";
 
     public static class VideoCallFrameLayout extends FrameLayout {
-        private static final long ATTACH_RETRY_DELAY_MS = 250L;
+        private static final long RETRY_DELAY_MS = 200L;
+        private static final int  MAX_RETRIES    = 40; // 8 s total
 
-        public String type;
-        public int callId = -1;
-        private final Runnable attachRunnable = this::updateViewInternal;
+        String type   = null;
+        int    callId = -1;
+        int    retries = 0;
+
+        private final Runnable retryRunnable = this::tryAttachView;
 
         public VideoCallFrameLayout(Context context) {
             super(context);
@@ -34,106 +41,93 @@ public class VideoCallViewManager extends SimpleViewManager<VideoCallViewManager
         @Override
         protected void onAttachedToWindow() {
             super.onAttachedToWindow();
-            updateView();
+            tryAttachView();
         }
 
         @Override
         protected void onDetachedFromWindow() {
-            removeCallbacks(attachRunnable);
+            removeCallbacks(retryRunnable);
             removeAllViews();
             super.onDetachedFromWindow();
         }
 
-        public void updateView() {
-            removeCallbacks(attachRunnable);
-            post(attachRunnable);
-        }
-
-        private void updateViewInternal() {
+        /** Called synchronously from @ReactProp setters and on window attach. */
+        public void tryAttachView() {
+            removeCallbacks(retryRunnable);
             if (type == null) return;
 
-            try {
-                View videoView = null;
-                MediaManager mediaManager = getMediaManager();
-
-                if (mediaManager == null) {
-                    Log.w(REACT_CLASS, "MediaManager not available yet, retrying for type=" + type);
-                    scheduleRetry();
-                    return;
-                }
-
-                if ("local".equals(type)) {
-                    videoView = mediaManager.getLocalVideoView();
-                } else if ("remote".equals(type)) {
-                    if (callId == -1) {
-                        Log.d(REACT_CLASS, "Waiting for callId before attaching remote video");
-                        scheduleRetry();
-                        return;
-                    }
-                    videoView = mediaManager.getRemoteVideoView(callId);
-                }
-
-                if (videoView == null) {
-                    Log.d(REACT_CLASS, "Video view is null, retrying type=" + type + " callId=" + callId);
-                    scheduleRetry();
-                    return;
-                }
-
-                if (getChildCount() > 0 && getChildAt(0) == videoView) {
-                    return;
-                }
-
-                attachVideoView(videoView);
-            } catch (Exception e) {
-                Log.e(REACT_CLASS, "Error attaching video view", e);
-                scheduleRetry();
-            }
-        }
-
-        private void scheduleRetry() {
-            if (!isAttachedToWindow()) {
+            MediaManager mm = getMediaManager();
+            if (mm == null) {
+                scheduleRetry("MediaManager null");
                 return;
             }
-            removeCallbacks(attachRunnable);
-            postDelayed(attachRunnable, ATTACH_RETRY_DELAY_MS);
-        }
 
-        private void attachVideoView(View videoView) {
-            removeCallbacks(attachRunnable);
+            View videoView = null;
+            try {
+                if ("local".equals(type)) {
+                    videoView = mm.getLocalVideoView();
+                } else if ("remote".equals(type)) {
+                    if (callId == -1) {
+                        scheduleRetry("callId not set yet");
+                        return;
+                    }
+                    videoView = mm.getRemoteVideoView(callId);
+                } else {
+                    return; // unknown type
+                }
+            } catch (Exception e) {
+                Log.e(REACT_CLASS, "getVideoView error: " + e.getMessage());
+                scheduleRetry("exception in getVideoView");
+                return;
+            }
 
+            if (videoView == null) {
+                scheduleRetry(type + " view still null (callId=" + callId + ")");
+                return;
+            }
+
+            // Already attached – nothing to do.
+            if (getChildCount() > 0 && getChildAt(0) == videoView) {
+                retries = 0;
+                return;
+            }
+
+            // Detach from previous parent first (SurfaceView can only live in one parent).
             if (videoView.getParent() instanceof ViewGroup) {
                 ((ViewGroup) videoView.getParent()).removeView(videoView);
             }
 
             removeAllViews();
             videoView.setVisibility(View.VISIBLE);
-            addView(
-                videoView,
-                new FrameLayout.LayoutParams(
+            addView(videoView, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-            );
+                    FrameLayout.LayoutParams.MATCH_PARENT));
             requestLayout();
             invalidate();
-            Log.d(REACT_CLASS, type + " video view attached for callId: " + callId);
+            retries = 0;
+            Log.d(REACT_CLASS, type + " video attached  callId=" + callId);
+        }
+
+        private void scheduleRetry(String reason) {
+            if (!isAttachedToWindow()) return;
+            if (retries >= MAX_RETRIES) {
+                Log.w(REACT_CLASS, type + " video: giving up after " + MAX_RETRIES + " retries (" + reason + ")");
+                return;
+            }
+            Log.d(REACT_CLASS, type + " retry #" + (retries + 1) + " in " + RETRY_DELAY_MS + "ms — " + reason);
+            retries++;
+            postDelayed(retryRunnable, RETRY_DELAY_MS);
         }
 
         private MediaManager getMediaManager() {
             try {
+                Activity activity = null;
                 if (getContext() instanceof ThemedReactContext) {
-                    Activity currentActivity = ((ThemedReactContext) getContext()).getCurrentActivity();
-                    if (currentActivity != null) {
-                        return MediaManager.getInstance(currentActivity);
-                    }
+                    activity = ((ThemedReactContext) getContext()).getCurrentActivity();
                 }
-                Context appContext = getContext() != null ? getContext().getApplicationContext() : null;
-                if (appContext != null) {
-                    return MediaManager.getInstance(appContext);
-                }
-                return MediaManager.getInstance(getContext());
+                return MediaManager.getInstance(activity != null ? activity : getContext().getApplicationContext());
             } catch (Exception e) {
-                Log.e(REACT_CLASS, "Failed to get MediaManager", e);
+                Log.e(REACT_CLASS, "getMediaManager error: " + e.getMessage());
                 return null;
             }
         }
@@ -145,21 +139,23 @@ public class VideoCallViewManager extends SimpleViewManager<VideoCallViewManager
     }
 
     @Override
-    protected VideoCallFrameLayout createViewInstance(ThemedReactContext reactContext) {
-        return new VideoCallFrameLayout(reactContext);
+    protected VideoCallFrameLayout createViewInstance(ThemedReactContext context) {
+        return new VideoCallFrameLayout(context);
     }
 
     @ReactProp(name = "type")
     public void setType(VideoCallFrameLayout view, String type) {
         view.type = type;
-        Log.d(REACT_CLASS, "setType: " + type + " callId=" + view.callId);
-        view.updateView();
+        view.retries = 0;
+        Log.d(REACT_CLASS, "setType=" + type + "  callId=" + view.callId);
+        view.tryAttachView();
     }
 
     @ReactProp(name = "callId")
     public void setCallId(VideoCallFrameLayout view, int callId) {
         view.callId = callId;
-        Log.d(REACT_CLASS, "setCallId: " + callId + " type=" + view.type);
-        view.updateView();
+        view.retries = 0;
+        Log.d(REACT_CLASS, "setCallId=" + callId + "  type=" + view.type);
+        view.tryAttachView();
     }
 }

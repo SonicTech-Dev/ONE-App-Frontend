@@ -256,10 +256,11 @@ export default function SmartScreen({ navigation }) {
       if (selectedOption === 'LAN') {
           if (lastRegisteredTransport !== 'lan') {
             try {
-              // If the SIP line is already up on this transport, skip re-registration
-              // to avoid disrupting in-progress calls or the active SIP session.
+              // Only skip re-registration if the SIP line is already up on LAN specifically.
+              // Do NOT skip if status===2 but transport is 'wan' — we still need to switch.
               const currentStatus = await Akuvox.getSipStatus();
-              if (currentStatus === 2) {
+              const storedTransport = await AsyncStorage.getItem('registeredTransport');
+              if (currentStatus === 2 && storedTransport === 'lan') {
                 console.log('[SmartScreen] SIP already registered (LAN), skipping re-registration.');
                 setLastRegisteredTransport('lan');
                 setSipRegistrationStatus(2);
@@ -285,14 +286,14 @@ export default function SmartScreen({ navigation }) {
         } else if (selectedOption === 'WAN') {
           if (lastRegisteredTransport !== 'wan') {
             try {
-              // If the SIP line is already up on this transport, skip re-registration
-              // to avoid disrupting in-progress calls or the active SIP session.
+              // Only skip re-registration if the SIP line is already up on WAN specifically.
+              // Do NOT skip if status===2 but transport is 'lan' — we still need to switch.
               const currentStatus = await Akuvox.getSipStatus();
-              if (currentStatus === 2) {
+              const storedTransport = await AsyncStorage.getItem('registeredTransport');
+              if (currentStatus === 2 && storedTransport === 'wan') {
                 console.log('[SmartScreen] SIP already registered (WAN), skipping re-registration.');
                 setLastRegisteredTransport('wan');
                 setSipRegistrationStatus(2);
-                await AsyncStorage.setItem('registeredTransport', 'wan');
                 return;
               }
               console.log('[SmartScreen] Fetching WAN SIP credentials...');

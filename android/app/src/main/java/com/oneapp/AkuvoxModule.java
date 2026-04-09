@@ -33,6 +33,9 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
 
     private final ReactApplicationContext reactContext;
     private IRtspMessageListener smartLockRtspListener = null;
+    // Tracks the currently active SIP call ID so JS screens can poll it on mount
+    // and avoid missing the onCallEstablished event due to navigation timing.
+    private volatile int activeCallId = -1;
 
     public AkuvoxModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -165,6 +168,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 @Override
                 public int sipMessageFinishedCall(int callId, String reason) {
                     Log.d("SIP", "Call finished: ID=" + callId + ", reason=" + reason);
+                    if (callId == activeCallId) activeCallId = -1;
                     MediaManager.getInstance(activityOrApp()).stopLocalVideo(callId);
                     WritableMap params = Arguments.createMap();
                     params.putInt("callId", callId);
@@ -189,7 +193,16 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 @Override
                 public int sipMessageEstablishedCall(CallDataBean callData) {
                     int callId = callData.callId;
-                    MediaManager.getInstance(activityOrApp()).startLocalVideo(callId);
+                    activeCallId = callId;
+                    // startLocalVideo must run on the UI thread — camera init fails silently on bg threads.
+                    reactContext.runOnUiQueueThread(() -> {
+                        try {
+                            MediaManager.getInstance(activityOrApp()).startLocalVideo(callId);
+                            Log.d("SIP", "startLocalVideo called on UI thread for callId=" + callId);
+                        } catch (Exception e) {
+                            Log.e("SIP", "startLocalVideo failed: " + e.getMessage());
+                        }
+                    });
                     WritableMap params = Arguments.createMap();
                     params.putInt("callId", callId);
                     emitToJS("onCallEstablished", params);
@@ -226,6 +239,14 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         );
         // Per SDK docs: initMedia with Activity context
         MediaManager.getInstance(activityOrApp()).initMedia(activityOrApp());
+    }
+
+    @ReactMethod
+    public void getActiveCallId(Promise promise) {
+        // Returns the currently active call ID, or -1 if no call is in progress.
+        // Used by ActiveCallScreen on mount to recover the callId if the
+        // onCallEstablished event fired before the screen's listener was registered.
+        promise.resolve(activeCallId);
     }
 
     @ReactMethod

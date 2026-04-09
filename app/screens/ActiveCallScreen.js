@@ -36,6 +36,20 @@ export default function ActiveCallScreen({ route, navigation }) {
     navigation.navigate('AppNavigator');
   };
 
+  // On mount: query the native layer for an already-established call.
+  // This handles the race where onCallEstablished fires during navigation
+  // (before this screen's event listener is registered), which is common on
+  // fast LAN connections where the call connects in < 200 ms.
+  useEffect(() => {
+    if (!activeCallId) {
+      Akuvox.getActiveCallId().then(id => {
+        if (id !== -1) {
+          setActiveCallId(id);
+        }
+      }).catch(() => {});
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Pulse animation for dialing
   useEffect(() => {
     if (!activeCallId && isOutgoing) {
