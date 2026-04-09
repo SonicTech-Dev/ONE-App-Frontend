@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Animated, Alert, Platform, PermissionsAndroid, NativeModules, NativeEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from '../components/Smart/Header';
@@ -35,10 +35,13 @@ async function fetchWanSipCredentials(wanToken) {
     headers,
     body: JSON.stringify({ command: 'get_account_info', id: SIP_REQUEST_ID, param: {} }),
   });
+  if (!accountRes.ok) {
+    throw new Error(`[WAN SIP] account_info failed: HTTP ${accountRes.status}`);
+  }
   const accountData = await accountRes.json();
   const firstName = accountData?.result?.first_name || '';
   const lastName = accountData?.result?.last_name || '';
-  const displayName = `${firstName} ${lastName}`.trim();
+  const displayName = `${firstName} ${lastName}`.trim() || 'User';
 
   // Fetch SIP ciphertext from contact_list
   const contactRes = await fetch('https://one-development.soniciot.com/contact_list/', {
@@ -50,13 +53,34 @@ async function fetchWanSipCredentials(wanToken) {
       param: { residence_id: SIP_RESIDENCE_ID, show_ability: true },
     }),
   });
+  if (!contactRes.ok) {
+    throw new Error(`[WAN SIP] contact_list failed: HTTP ${contactRes.status}`);
+  }
   const contactData = await contactRes.json();
   const sipToken = contactData?.result?.ciphertext;
+  if (!sipToken) {
+    throw new Error('[WAN SIP] ciphertext missing from contact_list response');
+  }
 
   console.log('[WAN SIP] displayName:', displayName);
   console.log('[WAN SIP] ciphertext:', sipToken);
 
   return { sipToken, displayName };
+}
+
+async function fetchWithTimeout(url, options, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(`LAN request timed out after ${timeoutMs}ms — device may be unreachable`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function fetchLanSipCredentials(lanToken) {
@@ -67,25 +91,34 @@ async function fetchLanSipCredentials(lanToken) {
   };
   const baseUrl = 'http://192.168.2.115/api/v1.0/account';
 
-  // Fetch SIP register info
-  const sipRes = await fetch(baseUrl, {
+  // Fetch SIP register info (5s timeout — LAN device may be unreachable)
+  const sipRes = await fetchWithTimeout(baseUrl, {
     method: 'POST',
     headers,
     body: JSON.stringify({ command: 'get_sip_register_info', id: SIP_REQUEST_ID, param: {} }),
   });
+  if (!sipRes.ok) {
+    throw new Error(`[LAN SIP] get_sip_register_info failed: HTTP ${sipRes.status}`);
+  }
   const sipData = await sipRes.json();
   const sipToken = sipData?.result?.sip_info;
+  if (!sipToken) {
+    throw new Error('[LAN SIP] sip_info missing from response');
+  }
 
   // Fetch display name from account_info
-  const accountRes = await fetch(baseUrl, {
+  const accountRes = await fetchWithTimeout(baseUrl, {
     method: 'POST',
     headers,
     body: JSON.stringify({ command: 'get_account_info', id: SIP_REQUEST_ID, param: {} }),
   });
+  if (!accountRes.ok) {
+    throw new Error(`[LAN SIP] get_account_info failed: HTTP ${accountRes.status}`);
+  }
   const accountData = await accountRes.json();
   const firstName = accountData?.result?.first_name || '';
   const lastName = accountData?.result?.last_name || '';
-  const displayName = `${firstName} ${lastName}`.trim();
+  const displayName = `${firstName} ${lastName}`.trim() || 'User';
 
   console.log('[LAN SIP] displayName:', displayName);
   console.log('[LAN SIP] sip_info (ciphertext):', sipToken);
@@ -110,7 +143,7 @@ async function requestPermissionsIfNeeded() {
 const ipv4Regex = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
 
 export default function SmartScreen({ navigation }) {
-  const { getActiveLanToken, getActiveWanToken } = useAuth();
+  const { getActiveLanToken, getActiveWanToken, networkMode } = useAuth();
   
   const getHeaders = async () => {
     const activeToken = selectedOption === 'LAN' ? await getActiveLanToken() : await getActiveWanToken();
@@ -121,7 +154,8 @@ export default function SmartScreen({ navigation }) {
     };
   };
 
-  const [selectedOption, setSelectedOption] = useState('LAN');
+  // Initialise from the mode determined at login (LAN or WAN).
+  const [selectedOption, setSelectedOption] = useState(networkMode || 'WAN');
   const [deviceCategories, setDeviceCategories] = useState(INITIAL_DEVICE_CATEGORIES);
   const scrollY = useRef(new Animated.Value(0)).current;
   const colors = useColors();
@@ -137,17 +171,33 @@ export default function SmartScreen({ navigation }) {
   const [sipInitialized, setSipInitialized] = useState(false);
   const [lastRegisteredTransport, setLastRegisteredTransport] = useState(null); // 'lan' | 'wan' | null
   const [sipRegistrationStatus, setSipRegistrationStatus] = useState(null);
+  // Ref so the onSipRegStatus event handler can read selectedOption without re-subscribing.
+  const selectedOptionRef = useRef(selectedOption);
+  useEffect(() => { selectedOptionRef.current = selectedOption; }, [selectedOption]);
 
   useEffect(() => {
     console.log('[SmartScreen] selectedOption:', selectedOption);
     console.log('[SmartScreen] callbackRegistered:', callbackRegistered);
   }, [selectedOption, callbackRegistered]);
 
+  // Reset callback registration whenever the user switches mode so re-registration
+  // is attempted if they return to LAN.
+  useEffect(() => {
+    setCallbackRegistered(false);
+  }, [selectedOption]);
+
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(Akuvox);
-    const subscription = eventEmitter.addListener('onSipRegStatus', ({ status }) => {
+    const subscription = eventEmitter.addListener('onSipRegStatus', async ({ status }) => {
       console.log('[SmartScreen] Native SIP registration status:', status);
       setSipRegistrationStatus(status);
+      // Only write registeredTransport to AsyncStorage once the SIP line is truly UP (status===2).
+      // This prevents contacts screen from trying to call on an unregistered line.
+      if (status === 2) {
+        const transport = selectedOptionRef.current === 'LAN' ? 'lan' : 'wan';
+        await AsyncStorage.setItem('registeredTransport', transport);
+        console.log('[SmartScreen] registeredTransport confirmed and saved:', transport);
+      }
     });
 
     return () => subscription.remove();
@@ -157,6 +207,16 @@ export default function SmartScreen({ navigation }) {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      // Restore persisted transport so we don't re-register on every SmartScreen mount.
+      // The native SIP stack keeps the registration alive across screen navigations.
+      try {
+        const savedTransport = await AsyncStorage.getItem('registeredTransport');
+        if (mounted && (savedTransport === 'lan' || savedTransport === 'wan')) {
+          setLastRegisteredTransport(savedTransport);
+          console.log('[SmartScreen] Restored registeredTransport from storage:', savedTransport);
+        }
+      } catch (_) {}
+
       const permissionsGranted = await requestPermissionsIfNeeded();
       if (!permissionsGranted) {
         Alert.alert('Permission Denied', 'Camera and microphone permissions are required for calls.');
@@ -193,40 +253,65 @@ export default function SmartScreen({ navigation }) {
     const register = async () => {
       if (!sipInitialized) return;
 
-      try {
-        if (selectedOption === 'LAN') {
+      if (selectedOption === 'LAN') {
           if (lastRegisteredTransport !== 'lan') {
-            console.log('[SmartScreen] Fetching LAN SIP credentials...');
-            const lanToken = await getActiveLanToken();
-            const { sipToken: lanSipToken, displayName: lanDisplayName } = await fetchLanSipCredentials(lanToken);
-            console.log('[SmartScreen] Registering SIP via LAN, display name:', lanDisplayName);
-            const res = await Akuvox.registerSipLan(lanSipToken, lanDisplayName);
-            console.log('[SmartScreen] LAN register result:', res);
-            setLastRegisteredTransport('lan');
-            await AsyncStorage.setItem('registeredTransport', 'lan');
-            const status = await Akuvox.getSipStatus();
-            setSipRegistrationStatus(status);
-            console.log('[SmartScreen] SIP line status after LAN registration:', status);
+            try {
+              // If the SIP line is already up on this transport, skip re-registration
+              // to avoid disrupting in-progress calls or the active SIP session.
+              const currentStatus = await Akuvox.getSipStatus();
+              if (currentStatus === 2) {
+                console.log('[SmartScreen] SIP already registered (LAN), skipping re-registration.');
+                setLastRegisteredTransport('lan');
+                setSipRegistrationStatus(2);
+                return;
+              }
+              console.log('[SmartScreen] Fetching LAN SIP credentials...');
+              const lanToken = await getActiveLanToken();
+              const { sipToken: lanSipToken, displayName: lanDisplayName } = await fetchLanSipCredentials(lanToken);
+              console.log('[SmartScreen] Registering SIP via LAN, display name:', lanDisplayName);
+              const res = await Akuvox.registerSipLan(lanSipToken, lanDisplayName);
+              console.log('[SmartScreen] LAN register result:', res);
+              // registeredTransport is written to AsyncStorage only when onSipRegStatus
+              // fires status===2 to guarantee the SIP line is truly registered.
+              setLastRegisteredTransport('lan');
+              const status = await Akuvox.getSipStatus();
+              setSipRegistrationStatus(status);
+              console.log('[SmartScreen] SIP line status after LAN registration:', status);
+            } catch (lanError) {
+              // LAN failure is non-fatal — user may not be on home Wi-Fi
+              console.warn('[SmartScreen] LAN SIP registration skipped:', lanError?.message || lanError);
+            }
           }
         } else if (selectedOption === 'WAN') {
           if (lastRegisteredTransport !== 'wan') {
-            console.log('[SmartScreen] Fetching WAN SIP credentials...');
-            const wanToken = await getActiveWanToken();
-            const { sipToken: wanSipToken, displayName: wanDisplayName } = await fetchWanSipCredentials(wanToken);
-            console.log('[SmartScreen] Registering SIP via WAN, display name:', wanDisplayName);
-            const res = await Akuvox.registerSip(wanSipToken, wanDisplayName);
-            console.log('[SmartScreen] WAN register result:', res);
-            setLastRegisteredTransport('wan');
-            await AsyncStorage.setItem('registeredTransport', 'wan');
-            const status = await Akuvox.getSipStatus();
-            setSipRegistrationStatus(status);
-            console.log('[SmartScreen] SIP line status after WAN registration:', status);
+            try {
+              // If the SIP line is already up on this transport, skip re-registration
+              // to avoid disrupting in-progress calls or the active SIP session.
+              const currentStatus = await Akuvox.getSipStatus();
+              if (currentStatus === 2) {
+                console.log('[SmartScreen] SIP already registered (WAN), skipping re-registration.');
+                setLastRegisteredTransport('wan');
+                setSipRegistrationStatus(2);
+                await AsyncStorage.setItem('registeredTransport', 'wan');
+                return;
+              }
+              console.log('[SmartScreen] Fetching WAN SIP credentials...');
+              const wanToken = await getActiveWanToken();
+              const { sipToken: wanSipToken, displayName: wanDisplayName } = await fetchWanSipCredentials(wanToken);
+              console.log('[SmartScreen] Registering SIP via WAN, display name:', wanDisplayName);
+              const res = await Akuvox.registerSip(wanSipToken, wanDisplayName);
+              console.log('[SmartScreen] WAN register result:', res);
+              // registeredTransport is written to AsyncStorage only when onSipRegStatus
+              // fires status===2 to guarantee the SIP line is truly registered.
+              setLastRegisteredTransport('wan');
+              const status = await Akuvox.getSipStatus();
+              setSipRegistrationStatus(status);
+              console.log('[SmartScreen] SIP line status after WAN registration:', status);
+            } catch (wanError) {
+              console.warn('[SmartScreen] WAN SIP registration skipped:', wanError?.message || wanError);
+            }
           }
         }
-      } catch (error) {
-        console.warn('[SmartScreen] SIP registration error:', error);
-        Alert.alert('SIP Registration Error', error?.message || 'Failed to register SIP.');
-      }
     };
 
     register();
@@ -238,8 +323,9 @@ export default function SmartScreen({ navigation }) {
     }
   }, [selectedOption, callbackRegistered]);
 
-  // This function updates device state based on callback payload
-  const handleRequest = (req, payload) => {
+  // This function updates device state based on callback payload.
+  // Wrapped in useCallback so CallbackServer never restarts due to a new function reference.
+  const handleRequest = useCallback((req, payload) => {
     // Log the incoming request from the device to your local server
     try {
       console.log('[CallbackServer] Incoming callback request:', {
@@ -272,7 +358,15 @@ export default function SmartScreen({ navigation }) {
         );
       });
     }
-  };
+  }, []);
+
+  // Stable callback-registration status handler — must not be an inline arrow so
+  // CallbackRegistration's run-effect dep array stays stable between renders.
+  const handleCallbackStatus = useCallback((status, res) => {
+    console.log('[SmartScreen] Callback registration status:', status, res);
+    if (status === 'success') setCallbackRegistered(true);
+    if (status === 'error') console.log('Callback Registration Error', res?.message || 'Failed to register callback.');
+  }, []);
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, 166],
@@ -434,15 +528,11 @@ export default function SmartScreen({ navigation }) {
       {selectedOption === 'LAN' && !callbackRegistered && (
         <CallbackRegistration
           deviceCallbackUrl="http://192.168.2.115/api/v1.0/callback"
-          callbackUrl={callbackUrl}                 // Use detected IPv4 instead of static
+          callbackUrl={callbackUrl}
           callbackId="c45e846ca23ab42c9ae469d988ae32a96"
           listenList={['device']}
-          run={selectedOption === 'LAN' && !callbackRegistered}
-          onStatus={(status, res) => {
-            console.log('[SmartScreen] Callback registration status:', status, res);
-            if (status === 'success') setCallbackRegistered(true);
-            if (status === 'error') console.log('Callback Registration Error', res?.message || 'Failed to register callback.');
-          }}
+          run={true}
+          onStatus={handleCallbackStatus}
         />
       )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   PermissionsAndroid,
   Platform,
   NativeModules,
+  NativeEventEmitter,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,18 +27,22 @@ const apiResult = {
   family_name: 'One-Dev Mockup-Flat',
   sip_group: '1191000500',
   devices: [
-    { device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip_wan: '1192101703', sip_lan: '1000' },
-    { device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip_wan: '1192101705', sip_lan: '1003' },
-    { device_id: 'd9a69e144b34c47ea822169672c0fd40d', device_name: 'Hypanel KeyPlus  1 on M1', mac: '0C110527CAAC', sip_wan: '1192102163', sip_lan: '1001' },
-    { device_id: 'd7ed72241e59342d29daffc0911503029', device_name: 'Hypanel KeyPlus 2 in M1', mac: '0C110527CA8F', sip_wan: '1192102164', sip_lan: '1002' },
+    //onsite { device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip_wan: '1192101703', sip_lan: '1000' },
+    { device_id: 'd03852d726b074d77a7d658e7fac7d3b6', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip_wan: '1192102080', sip_lan: '1000' },
+    //onsite { device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip_wan: '1192101705', sip_lan: '1003' },
+    { device_id: 'd394ddaa179d0469ebe4b7c710bfbe5e0', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip_wan: '1192102082', sip_lan: '1003' },
+    //onsite { device_id: 'd9a69e144b34c47ea822169672c0fd40d', device_name: 'Hypanel KeyPlus  1 on M1', mac: '0C110527CAAC', sip_wan: '1192102163', sip_lan: '1001' },
+    { device_id: 'd6909df0aa38444ba8e11ce1f55e3cb9d', device_name: 'Hypanel KeyPlus  Bedside', mac: '0C110527CAAC', sip_wan: '1192102081', sip_lan: '1001' },
+    //onsite { device_id: 'd7ed72241e59342d29daffc0911503029', device_name: 'Hypanel KeyPlus 2 in M1', mac: '0C110527CA8F', sip_wan: '1192102164', sip_lan: '1002' },
+    { device_id: 'd715ca4ce814c436ba3cb8a88702170c5', device_name: 'Hypanel KeyPlus Kitchen', mac: '0C110527CA8F', sip_wan: '1192102083', sip_lan: '1002' },
   ],
   accounts: [
     { account_id: 'a9b41de81c3284515a5e833d53412fe14', sip_wan: '1192101702', sip_lan: '1192101702', account_name: 'fayis@sonictech.ae', first_name: 'Laguna Mockup', last_name: 'One-Development', email: 'fayis@sonictech.ae', main_sip: '1192101504' },
-    { account_id: 'a26325098299c4090b7db6117cc0d623f', sip_wan: '1192101706', sip_lan: '1192101706', account_name: 'mahmoudsalah11350@gmail.com', first_name: 'Mahmoud', last_name: 'Salah', email: 'mahmoudsalah11350@gmail.com', main_sip: '1467100107' },
     { account_id: 'a2a340656d43745fdafce231cc9d1b2d1', sip_wan: '1192102110', sip_lan: '1192102110', account_name: 'marwan@sonictech.ae', first_name: 'Marwan', last_name: 'Khater', email: 'marwan@sonictech.ae', main_sip: '1467100107' },
   ],
   akuvox_devices: [
-    { mac: '0C11052C6E92', device_name: 'Intercom R29', sip_wan: '1192101722', sip_lan: '1004' },
+    //onsite { mac: '0C11052C6E92', device_name: 'Intercom R29', sip_wan: '1192101722', sip_lan: '1004' },
+    { mac: '0C11052C6E79', device_name: 'Intercom R29', sip_wan: '1192102367', sip_lan: '1004' },
   ],
 };
 
@@ -98,6 +103,18 @@ export default function SdkContactScreen({ navigation }) {
 
   const contacts = getContacts();
 
+  // ------- Keep sipStatus in sync with the native SIP line -------
+  // Subscribe to onSipRegStatus events so we get live updates
+  // (status 1=trying, 2=registered, 3=failed).
+  useEffect(() => {
+    const emitter = new NativeEventEmitter(Akuvox);
+    const sub = emitter.addListener('onSipRegStatus', ({ status }) => {
+      setSipStatus(status);
+    });
+    return () => sub.remove();
+  }, []);
+  // ---------------------------------------------------------------
+
   const loadTransport = async () => {
     try {
       const t = await AsyncStorage.getItem('registeredTransport');
@@ -115,20 +132,14 @@ export default function SdkContactScreen({ navigation }) {
   useFocusEffect(
     React.useCallback(() => {
       loadTransport();
+      // Also refresh the current SIP line status on focus
+      Akuvox.getSipStatus().then(setSipStatus).catch(() => {});
     }, [])
   );
 
   // Optionally poll or fetch SIP status to show user feedback
   useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const status = await Akuvox.getSipStatus();
-        setSipStatus(status);
-      } catch (e) {
-        // non-blocking
-      }
-    };
-    fetchStatus();
+    Akuvox.getSipStatus().then(setSipStatus).catch(() => {});
   }, []);
 
   const uniqueSipTargets = (items) => {
@@ -162,10 +173,10 @@ export default function SdkContactScreen({ navigation }) {
     }
 
     if (registeredTransport === 'wan') {
+      // sip_wan first — devices have no main_sip so it must not be the leading candidate
       return uniqueSipTargets([
-        contact.main_sip,
         contact.sip_wan,
-        contact.sip_lan,
+        contact.main_sip,
         contact.sip_group,
         contact.sip,
       ]);
@@ -184,6 +195,13 @@ export default function SdkContactScreen({ navigation }) {
   const handleMakeAudioCall = async (contact) => {
     if (!registeredTransport) {
       Alert.alert('Not Registered', 'Please go to Smart page and choose LAN or WAN to register SIP.');
+      return;
+    }
+    if (sipStatus !== 2) {
+      Alert.alert(
+        'SIP Not Ready',
+        `SIP line is ${sipStatus === 1 ? 'still registering' : sipStatus === 3 ? 'registration failed' : 'not ready'}. Please wait a moment and try again.`
+      );
       return;
     }
     const permissionsGranted = await requestPermissionsIfNeeded();
@@ -221,6 +239,13 @@ export default function SdkContactScreen({ navigation }) {
   const handleMakeVideoCall = async (contact) => {
     if (!registeredTransport) {
       Alert.alert('Not Registered', 'Please go to Smart page and choose LAN or WAN to register SIP.');
+      return;
+    }
+    if (sipStatus !== 2) {
+      Alert.alert(
+        'SIP Not Ready',
+        `SIP line is ${sipStatus === 1 ? 'still registering' : sipStatus === 3 ? 'registration failed' : 'not ready'}. Please wait a moment and try again.`
+      );
       return;
     }
     const permissionsGranted = await requestPermissionsIfNeeded();
@@ -273,7 +298,14 @@ export default function SdkContactScreen({ navigation }) {
         <View style={styles.contactInfo}>
           <Text style={styles.contactName}>{item.name}</Text>
           <Text style={styles.contactDetail}>
-            {item.type} {item.sip_lan ? `• LAN` : ''}
+            {item.type}
+            {registeredTransport === 'lan' && item.sip_lan
+              ? `  •  LAN ${item.sip_lan}`
+              : registeredTransport === 'wan' && item.sip_wan
+              ? `  •  WAN ${item.sip_wan}`
+              : item.sip_wan
+              ? `  •  ${item.sip_wan}`
+              : ''}
           </Text>
         </View>
       </TouchableOpacity>
@@ -325,9 +357,27 @@ export default function SdkContactScreen({ navigation }) {
       {/* Header with status pill (no init/register buttons) */}
       <View style={styles.headerBar}>
         <Text style={styles.headerTitle}>Contacts</Text>
-        <View style={[styles.statusPill, registeredTransport ? styles.statusPillReady : styles.statusPillIdle]}>
-          <Text style={[styles.statusPillText, registeredTransport ? styles.statusPillTextReady : styles.statusPillTextIdle]}>
-            {registeredTransport ? `Registered: ${registeredTransport.toUpperCase()}` : 'Not Registered'}
+        <View style={[
+          styles.statusPill,
+          sipStatus === 2 ? styles.statusPillReady
+            : sipStatus === 1 ? styles.statusPillBusy
+            : styles.statusPillIdle,
+        ]}>
+          <Text style={[
+            styles.statusPillText,
+            sipStatus === 2 ? styles.statusPillTextReady
+              : sipStatus === 1 ? styles.statusPillTextBusy
+              : styles.statusPillTextIdle,
+          ]}>
+            {sipStatus === 2
+              ? `${registeredTransport ? registeredTransport.toUpperCase() : ''} Ready`
+              : sipStatus === 1
+              ? 'Registering…'
+              : sipStatus === 3
+              ? 'SIP Failed'
+              : registeredTransport
+              ? `${registeredTransport.toUpperCase()} (checking…)`
+              : 'Not Registered'}
           </Text>
         </View>
       </View>
@@ -388,6 +438,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ede5ff',
     borderColor: '#dccbff',
   },
+  statusPillBusy: {
+    backgroundColor: '#fff8e1',
+    borderColor: '#ffe082',
+  },
   statusPillIdle: {
     backgroundColor: '#f5f2ff',
     borderColor: '#e7dcff',
@@ -398,6 +452,9 @@ const styles = StyleSheet.create({
   },
   statusPillTextReady: {
     color: '#5b38c2',
+  },
+  statusPillTextBusy: {
+    color: '#b07800',
   },
   statusPillTextIdle: {
     color: '#826fb3',

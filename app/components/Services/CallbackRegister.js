@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function CallbackRegistration({
@@ -11,30 +11,42 @@ export default function CallbackRegistration({
 }) {
   const { getActiveLanToken } = useAuth();
   const [lanHeaders, setLanHeaders] = useState(null);
+  // headersLoading starts true so the run-effect waits silently until the async
+  // token fetch either succeeds or fails before deciding to warn.
+  const [headersLoading, setHeadersLoading] = useState(true);
+  // Always hold the latest onStatus reference without putting it in effect deps.
+  const onStatusRef = useRef(onStatus);
+  useEffect(() => { onStatusRef.current = onStatus; });
 
-  // Build LAN headers once
+  // Build LAN headers once on mount
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const token = await getActiveLanToken();
         const headers = { 'Authorization': `Bearer ${token}` };
-        if (mounted) setLanHeaders(headers || null);
-        console.log('[CallbackRegistration] Built LAN headers:', headers);
+        if (mounted) {
+          setLanHeaders(headers);
+          console.log('[CallbackRegistration] Built LAN headers:', headers);
+        }
       } catch (err) {
         console.error('[CallbackRegistration] Failed to build LAN headers:', err);
         if (mounted) setLanHeaders(null);
+      } finally {
+        if (mounted) setHeadersLoading(false);
       }
     })();
     return () => { mounted = false; };
   }, []);
 
-  // Register callback when run=true and headers are ready
+  // Register callback when run=true and headers are settled
   useEffect(() => {
     if (!run) return;
+    // Silently wait while the token fetch is still in-flight
+    if (headersLoading) return;
     if (!lanHeaders || typeof lanHeaders !== 'object') {
       console.warn('[CallbackRegistration] LAN headers not ready, cannot register callback.');
-      onStatus?.('error', { message: 'LAN headers not ready' });
+      onStatusRef.current?.('error', { message: 'LAN headers not ready' });
       return;
     }
 
@@ -86,20 +98,22 @@ export default function CallbackRegistration({
 
         // Pass parsed data (if any) to onStatus
         if (response.ok) {
-          onStatus?.('success', data ?? { status: response.status });
+          onStatusRef.current?.('success', data ?? { status: response.status });
         } else {
-          onStatus?.('error', data ?? { status: response.status, statusText: response.statusText });
+          onStatusRef.current?.('error', data ?? { status: response.status, statusText: response.statusText });
         }
       } catch (error) {
         if (error.name === 'AbortError') return;
         console.error('[CallbackRegistration] Network/Error:', error);
-        onStatus?.('error', { message: error.message || 'Network error' });
+        onStatusRef.current?.('error', { message: error.message || 'Network error' });
       }
     };
 
     configureCallback();
     return () => controller.abort();
-  }, [run, lanHeaders, deviceCallbackUrl, callbackUrl, callbackId, listenList, onStatus]);
+  // onStatus intentionally excluded — it's accessed via onStatusRef to prevent
+  // the effect from re-firing on every SmartScreen render.
+  }, [run, headersLoading, lanHeaders, deviceCallbackUrl, callbackUrl, callbackId, listenList]);
 
   return null;
 }
