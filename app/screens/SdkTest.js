@@ -110,13 +110,17 @@ export default function SdkContactScreen({ navigation }) {
     const emitter = new NativeEventEmitter(Akuvox);
     const sub = emitter.addListener('onSipRegStatus', ({ status }) => {
       setSipStatus(status);
-      // SmartScreen writes registeredTransport to AsyncStorage before calling
-      // registerSip/registerSipLan, so reading it here is always up-to-date.
-      // This handles the case where the user is already on the contacts screen
-      // when registration completes.
-      AsyncStorage.getItem('registeredTransport').then(t => {
-        if (t === 'lan' || t === 'wan') setRegisteredTransport(t);
-      }).catch(() => {});
+      if (status === 2) {
+        // Registration confirmed — read the transport that SmartScreen's
+        // onSipRegStatus(2) handler just wrote to AsyncStorage.
+        AsyncStorage.getItem('registeredTransport').then(t => {
+          if (t === 'lan' || t === 'wan') setRegisteredTransport(t);
+        }).catch(() => {});
+      } else {
+        // status=1 (trying) or status=3 (failed): block calls immediately so the
+        // user cannot dial while the SIP line is switching transports or in error.
+        setRegisteredTransport(null);
+      }
     });
     return () => sub.remove();
   }, []);

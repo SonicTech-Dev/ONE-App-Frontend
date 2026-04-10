@@ -266,12 +266,14 @@ export default function SmartScreen({ navigation }) {
                 setSipRegistrationStatus(2);
                 return;
               }
+              // Clear transport so SdkTest blocks calls until onSipRegStatus(2) confirms
+              // the new registration. The onSipRegStatus handler is the sole writer of
+              // registeredTransport once a switch is in progress.
+              await AsyncStorage.removeItem('registeredTransport');
+              setSipRegistrationStatus(null);
               console.log('[SmartScreen] Fetching LAN SIP credentials...');
               const lanToken = await getActiveLanToken();
               const { sipToken: lanSipToken, displayName: lanDisplayName } = await fetchLanSipCredentials(lanToken);
-              // Write transport eagerly so contacts screen sees the correct mode
-              // immediately, without waiting for onSipRegStatus status===2.
-              await AsyncStorage.setItem('registeredTransport', 'lan');
               console.log('[SmartScreen] Registering SIP via LAN, display name:', lanDisplayName);
               const res = await Akuvox.registerSipLan(lanSipToken, lanDisplayName);
               console.log('[SmartScreen] LAN register result:', res);
@@ -299,12 +301,14 @@ export default function SmartScreen({ navigation }) {
                 setSipRegistrationStatus(2);
                 return;
               }
+              // Clear transport so SdkTest blocks calls until onSipRegStatus(2) confirms
+              // the new registration. The onSipRegStatus handler is the sole writer of
+              // registeredTransport once a switch is in progress.
+              await AsyncStorage.removeItem('registeredTransport');
+              setSipRegistrationStatus(null);
               console.log('[SmartScreen] Fetching WAN SIP credentials...');
               const wanToken = await getActiveWanToken();
               const { sipToken: wanSipToken, displayName: wanDisplayName } = await fetchWanSipCredentials(wanToken);
-              // Write transport eagerly so contacts screen sees the correct mode
-              // immediately, without waiting for onSipRegStatus status===2.
-              await AsyncStorage.setItem('registeredTransport', 'wan');
               console.log('[SmartScreen] Registering SIP via WAN, display name:', wanDisplayName);
               const res = await Akuvox.registerSip(wanSipToken, wanDisplayName);
               console.log('[SmartScreen] WAN register result:', res);

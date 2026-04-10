@@ -93,7 +93,7 @@ export default function ActiveCallScreen({ route, navigation }) {
         }
       }
 
-      if (data.callId === activeCallId || data.callId === callId || !activeCallId) {
+      if (data.callId === activeCallId || (isOutgoing && !activeCallId)) {
         closeScreen();
       }
     });

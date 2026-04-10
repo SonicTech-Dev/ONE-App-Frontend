@@ -254,6 +254,15 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void registerSip(String ciphertext, String displayName, Promise promise) {
         try {
+            // Reset stale call state from any previous session.
+            activeCallId = -1;
+            // Gracefully deregister from the previous transport before switching.
+            // Without this, the SDK's internal socket/connection stays bound to the
+            // old protocol and INVITE requests fail even though REGISTER succeeds.
+            MediaManager.getInstance(activityOrApp()).setSipBackendOnline(false);
+            // Re-initialize the media/transport layer so TLS sockets, port bindings,
+            // and codec sessions are all freshly created for the new transport.
+            MediaManager.getInstance(activityOrApp()).initMedia(activityOrApp());
             MediaManager.getInstance(activityOrApp()).setSipTransType(SipTransTypeEnum.TRANS_TYPE_TLS);
             int result = MediaManager.getInstance(activityOrApp()).setSipAccount(ciphertext, displayName);
             MediaManager.getInstance(activityOrApp()).setSipBackendOnline(true);
@@ -271,6 +280,15 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void registerSipLan(String ciphertext, String displayName, Promise promise) {
         try {
+            // Reset stale call state from any previous session.
+            activeCallId = -1;
+            // Gracefully deregister from the previous transport before switching.
+            // Without this, the SDK's internal socket/connection stays bound to the
+            // old protocol and INVITE requests fail even though REGISTER succeeds.
+            MediaManager.getInstance(activityOrApp()).setSipBackendOnline(false);
+            // Re-initialize the media/transport layer so UDP sockets, port bindings,
+            // and codec sessions are all freshly created for the new transport.
+            MediaManager.getInstance(activityOrApp()).initMedia(activityOrApp());
             MediaManager.getInstance(activityOrApp()).setSipTransType(SipTransTypeEnum.TRANS_TYPE_UDP);
             int result = MediaManager.getInstance(activityOrApp()).setSipAccount(ciphertext, displayName);
             MediaManager.getInstance(activityOrApp()).setSipBackendOnline(true);
