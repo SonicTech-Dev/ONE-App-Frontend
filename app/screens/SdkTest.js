@@ -30,11 +30,11 @@ const apiResult = {
     //onsite { device_id: 'd4f54a92bea2a440c8a6a23d0b636dcf7', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip_wan: '1192101703', sip_lan: '1000' },
     { device_id: 'd03852d726b074d77a7d658e7fac7d3b6', device_name: 'HyPanel Supreme', mac: '0C110500755C', sip_wan: '1192102080', sip_lan: '1000' },
     //onsite { device_id: 'd1b001e5ddcf24d65a9d1c6ad23df43ba', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip_wan: '1192101705', sip_lan: '1003' },
-    { device_id: 'd394ddaa179d0469ebe4b7c710bfbe5e0', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip_wan: '1192102082', sip_lan: '1003' },
+    { device_id: 'd394ddaa179d0469ebe4b7c710bfbe5e0', device_name: 'Hypanel Lux', mac: '0C11052BF1CF', sip_wan: '1192102082', sip_lan: '1037' },
     //onsite { device_id: 'd9a69e144b34c47ea822169672c0fd40d', device_name: 'Hypanel KeyPlus  1 on M1', mac: '0C110527CAAC', sip_wan: '1192102163', sip_lan: '1001' },
-    { device_id: 'd6909df0aa38444ba8e11ce1f55e3cb9d', device_name: 'Hypanel KeyPlus  Bedside', mac: '0C110527CAAC', sip_wan: '1192102081', sip_lan: '1001' },
+    { device_id: 'd6909df0aa38444ba8e11ce1f55e3cb9d', device_name: 'Hypanel KeyPlus  Bedside', mac: '0C110527CAAC', sip_wan: '1192102081', sip_lan: '1035' },
     //onsite { device_id: 'd7ed72241e59342d29daffc0911503029', device_name: 'Hypanel KeyPlus 2 in M1', mac: '0C110527CA8F', sip_wan: '1192102164', sip_lan: '1002' },
-    { device_id: 'd715ca4ce814c436ba3cb8a88702170c5', device_name: 'Hypanel KeyPlus Kitchen', mac: '0C110527CA8F', sip_wan: '1192102083', sip_lan: '1002' },
+    { device_id: 'd715ca4ce814c436ba3cb8a88702170c5', device_name: 'Hypanel KeyPlus Kitchen', mac: '0C110527CA8F', sip_wan: '1192102083', sip_lan: '1036' },
   ],
   accounts: [
     { account_id: 'a9b41de81c3284515a5e833d53412fe14', sip_wan: '1192101702', sip_lan: '1192101702', account_name: 'fayis@sonictech.ae', first_name: 'Laguna Mockup', last_name: 'One-Development', email: 'fayis@sonictech.ae', main_sip: '1192101504' },
@@ -42,7 +42,7 @@ const apiResult = {
   ],
   akuvox_devices: [
     //onsite { mac: '0C11052C6E92', device_name: 'Intercom R29', sip_wan: '1192101722', sip_lan: '1004' },
-    { mac: '0C11052C6E79', device_name: 'Intercom R29', sip_wan: '1192102367', sip_lan: '1004' },
+    { mac: '0C11052C6E79', device_name: 'Intercom R29', sip_wan: '1192102367', sip_lan: '1038' },
   ],
 };
 

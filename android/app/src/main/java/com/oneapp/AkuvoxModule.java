@@ -36,6 +36,9 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     // Tracks the currently active SIP call ID so JS screens can poll it on mount
     // and avoid missing the onCallEstablished event due to navigation timing.
     private volatile int activeCallId = -1;
+    // Tracks the current outgoing/in-progress SIP call ID before establishment
+    // so JS can still cancel a ringing call.
+    private volatile int currentCallId = -1;
 
     public AkuvoxModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -169,6 +172,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 public int sipMessageFinishedCall(int callId, String reason) {
                     Log.d("SIP", "Call finished: ID=" + callId + ", reason=" + reason);
                     if (callId == activeCallId) activeCallId = -1;
+                    if (callId == currentCallId) currentCallId = -1;
                     MediaManager.getInstance(activityOrApp()).stopLocalVideo(callId);
                     WritableMap params = Arguments.createMap();
                     params.putInt("callId", callId);
@@ -194,6 +198,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
                 public int sipMessageEstablishedCall(CallDataBean callData) {
                     int callId = callData.callId;
                     activeCallId = callId;
+                    currentCallId = callId;
                     // Call startLocalVideo synchronously here (on the SIP callback thread)
                     // BEFORE emitting onCallEstablished to JS. This ensures the camera
                     // pipeline is started before any JS/view rendering touches getLocalVideoView().
@@ -252,10 +257,16 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void getCurrentCallId(Promise promise) {
+        promise.resolve(currentCallId != -1 ? currentCallId : activeCallId);
+    }
+
+    @ReactMethod
     public void registerSip(String ciphertext, String displayName, Promise promise) {
         try {
             // Reset stale call state from any previous session.
             activeCallId = -1;
+            currentCallId = -1;
             // Gracefully deregister from the previous transport before switching.
             // Without this, the SDK's internal socket/connection stays bound to the
             // old protocol and INVITE requests fail even though REGISTER succeeds.
@@ -282,6 +293,7 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         try {
             // Reset stale call state from any previous session.
             activeCallId = -1;
+            currentCallId = -1;
             // Gracefully deregister from the previous transport before switching.
             // Without this, the SDK's internal socket/connection stays bound to the
             // old protocol and INVITE requests fail even though REGISTER succeeds.
@@ -319,7 +331,22 @@ public class AkuvoxModule extends ReactContextBaseJavaModule {
         makeCallBean.remoteUserName = remoteUserName;
         makeCallBean.remoteDisplayName = remoteDisplayName;
         makeCallBean.callVideoMode = callVideoMode;
-        MediaManager.getInstance(activityOrApp()).makeCall(makeCallBean, activityOrApp());
+        int callId = MediaManager.getInstance(activityOrApp()).makeCall(makeCallBean, activityOrApp());
+
+        Log.d("SIP", "Outgoing call requested: callId=" + callId
+            + ", remoteUserName=" + remoteUserName
+            + ", remoteDisplayName=" + remoteDisplayName
+            + ", callVideoMode=" + callVideoMode);
+
+        if (callId > 0) {
+            currentCallId = callId;
+            WritableMap params = Arguments.createMap();
+            params.putInt("callId", callId);
+            params.putString("remoteUserName", remoteUserName);
+            params.putString("remoteDisplayName", remoteDisplayName);
+            params.putInt("callVideoMode", callVideoMode);
+            emitToJS("onOutgoingCallCreated", params);
+        }
     }
 
     @ReactMethod
