@@ -161,7 +161,7 @@ export default function DeviceModals({
       />
     );
   }
-  if (title.includes("Door/Window Sensor MasterBedroom") || title.includes("Door/Window Sensor Reception")) {
+  if (title.includes("Door/Window Sensor")) {
     return (
       <DoorWindowSensorModal
         visible={modalVisible}

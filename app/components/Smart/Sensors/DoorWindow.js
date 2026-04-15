@@ -13,21 +13,45 @@ export default function DoorWindowSensorModal({ visible, onClose, device, device
   const result = deviceStatus?.result || deviceStatus;
   const abilities = result?.abilities || [];
 
+  const normalizeDoorState = (value) => {
+    if (value === undefined || value === null) return "unknown";
+
+    const normalized = String(value).trim().toLowerCase();
+
+    if (["on", "open", "opened", "1", "true", "alarm", "triggered", "detected"].includes(normalized)) {
+      return "on";
+    }
+
+    if (["off", "close", "closed", "0", "false", "normal", "idle", "clear"].includes(normalized)) {
+      return "off";
+    }
+
+    return normalized || "unknown";
+  };
+
   // 1. Door/Window State
   // WAN: "Alarm State" with attribute.type === "door"
-  // LAN: ability_name "Door" or "Window" (case-insensitive)
+  // LAN: ability_name may vary between contact/door/window names depending on firmware.
   const doorAbility = abilities.find(a =>
-    (a.ability_name && a.ability_name.toLowerCase() === "alarm state" && a.attribute && a.attribute.type === "door")
+    (a.ability_name && a.ability_name.toLowerCase() === "alarm state" && a.attribute && ["door", "window", "contact"].includes(String(a.attribute.type || '').toLowerCase()))
     ||
-    (a.ability_name && (
-      a.ability_name.toLowerCase() === "door" ||
-      a.ability_name.toLowerCase() === "window"
-    ))
+    (a.ability_name && [
+      "door",
+      "window",
+      "contact",
+      "contact sensor state",
+      "contact state",
+      "door sensor state",
+      "window sensor state",
+      "door/window",
+      "door/window state"
+    ].includes(a.ability_name.toLowerCase()))
+    ||
+    (a.ability_type && ["door", "window", "contact", "binary_sensor"].includes(String(a.ability_type).toLowerCase()))
+    ||
+    (a.attribute && ["door", "window", "contact"].includes(String(a.attribute.type || '').toLowerCase()))
   );
-  doorState =
-    doorAbility && doorAbility.state !== undefined
-      ? doorAbility.state
-      : "unknown";
+  doorState = normalizeDoorState(doorAbility?.state);
 
   // 2. Battery Level (handle both "Battery Level" and "battery" and attribute.type === "battery")
   const batteryAbility = abilities.find(a =>
@@ -54,7 +78,7 @@ export default function DoorWindowSensorModal({ visible, onClose, device, device
             <Text style={{ fontSize: 22 }}>✕</Text>
           </TouchableOpacity>
 
-          <Text style={styles.title}>{device?.device_name || result?.device_name}</Text>
+          <Text style={styles.title}>{device?.title || device?.device_name || result?.device_name || result?.product_name}</Text>
 
           {!deviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -77,7 +101,7 @@ export default function DoorWindowSensorModal({ visible, onClose, device, device
                   styles.value,
                   doorState === "on" ? styles.on : doorState === "off" ? styles.off : styles.unknown
                 ]}>
-                  {doorState === "on" ? "OPEN" : doorState === "off" ? "CLOSED" : String(doorState)}
+                  {doorState === "on" ? "OPEN" : doorState === "off" ? "CLOSED" : String(doorState).toUpperCase()}
                 </Text>
               </View>
               {/* Only render the Battery row if battery is defined */}
