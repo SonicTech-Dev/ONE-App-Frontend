@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Text, Alert, StatusBar, Animated } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity, Text, Alert, StatusBar } from 'react-native';
 import { Video } from 'react-native-video';
 import AppButton from '../components/AppButton';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -9,33 +9,12 @@ import { useAuth, BACKEND_URL } from '../context/AuthContext';
 
 const DEFAULT_RESIDENCE_ID = "rabd2c6d2aecc4ce3be11e25b4ecd3c82";
 
-function TabSwitch({ isLoginMode, setIsLoginMode }) {
-  return (
-    <View style={styles.tabContainer}>
-      <TouchableOpacity 
-        style={[styles.tabButton, isLoginMode ? styles.activeTab : null]} 
-        onPress={() => setIsLoginMode(true)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.tabText, isLoginMode ? styles.activeTabText : null]}>Sign In</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity 
-        style={[styles.tabButton, !isLoginMode ? styles.activeTab : null]} 
-        onPress={() => setIsLoginMode(false)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.tabText, !isLoginMode ? styles.activeTabText : null]}>Register</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 export default function WelcomeScreen({ navigation }) {
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [signInTransport, setSignInTransport] = useState('WAN');
   
   // Use Global Auth Context
-  const { login, generateGeneralWanToken } = useAuth();
+  const { loginLan, loginWan, verifyOnlineAccount } = useAuth();
   
   // Form State
   const [email, setEmail] = useState('');
@@ -52,10 +31,23 @@ export default function WelcomeScreen({ navigation }) {
     return re.test(String(email).toLowerCase());
   };
 
+  const isLanSignIn = isLoginMode && signInTransport === 'LAN';
+  const isWanSignIn = isLoginMode && signInTransport === 'WAN';
+  const bannerTitle = isLoginMode ? `${signInTransport} mode` : 'Register';
+  const bannerText = isLoginMode
+    ? (isLanSignIn
+        ? 'Ensure you are connected to home Wi-Fi.'
+        : 'Ensure you have stable internet connection.')
+    : 'Ensure you have stable internet connection to create your account.';
+  const primaryButtonTitle = isLoginMode
+    ? (isLanSignIn ? 'Login Offline' : 'Sign In')
+    : 'Create Account';
+
   const attemptLogin = async () => {
     try {
-      // Delegates to our AuthContext to smoothly check LAN vs WAN and perform offline logging!
-      const authResult = await login(email, password);
+      const authResult = signInTransport === 'LAN'
+        ? await loginLan(email, password)
+        : await loginWan(email, password);
       
       if (authResult.success) {
         navigation.replace('AppNavigator');
@@ -80,23 +72,54 @@ export default function WelcomeScreen({ navigation }) {
     };
     
     try {
-      // Generate standard WAN Master Token using the general sonictech account!
-      const masterWanToken = await generateGeneralWanToken();
-
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${masterWanToken}`
+          'Accept': 'application/json'
         },
         body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (_) {
+        data = {};
+      }
+
+      const registrationLooksComplete = (
+        data?.family_linked === true ||
+        data?.cloud_created === true ||
+        data?.akubela_registered === true ||
+        data?.provisioned === true ||
+        data?.completed === true
+      );
 
       if (!response.ok) {
-        Alert.alert("Registration Failed", data.error || "Could not register on AkuBela.");
+        Alert.alert("Registration Failed", data.error || "Unable to complete registration right now.");
+        return;
+      }
+
+      try {
+        await verifyOnlineAccount(email, password);
+      } catch (_) {
+        Alert.alert(
+          "Registration Incomplete",
+          "Your account was saved, but setup is not fully completed yet. Please contact support or try again later."
+        );
+        return;
+      }
+
+      if (
+        Object.keys(data || {}).length > 0 &&
+        ['family_linked', 'cloud_created', 'akubela_registered', 'provisioned', 'completed'].some(key => key in (data || {})) &&
+        !registrationLooksComplete
+      ) {
+        Alert.alert(
+          "Registration Incomplete",
+          "Your account was created, but setup is not fully completed yet. Please contact support or try again later."
+        );
         return;
       }
 
@@ -106,7 +129,7 @@ export default function WelcomeScreen({ navigation }) {
       setPassword('');
 
     } catch (error) {
-      Alert.alert("Network Error", "Failed to connect to backend for registration.");
+      Alert.alert("Network Error", "Registration requires a stable internet connection.");
     } finally {
       setLoading(false);
     }
@@ -119,6 +142,22 @@ export default function WelcomeScreen({ navigation }) {
     } else {
       await attemptRegistration();
     }
+  };
+
+  const showSignInTab = () => setIsLoginMode(true);
+  const showRegisterTab = () => {
+    setIsLoginMode(false);
+    setSignInTransport('WAN');
+  };
+
+  const enterLanMode = () => {
+    setIsLoginMode(true);
+    setSignInTransport('LAN');
+  };
+
+  const enterWanMode = () => {
+    setIsLoginMode(true);
+    setSignInTransport('WAN');
   };
 
   return (
@@ -146,9 +185,29 @@ export default function WelcomeScreen({ navigation }) {
         </View>
 
         <View style={styles.formContainer}>
-          <TabSwitch isLoginMode={isLoginMode} setIsLoginMode={setIsLoginMode} />
+          <View style={styles.tabContainer}>
+            <TouchableOpacity 
+              style={[styles.tabButton, isLoginMode ? styles.activeTab : null]} 
+              onPress={showSignInTab}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabText, isLoginMode ? styles.activeTabText : null]}>Sign In</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.tabButton, !isLoginMode ? styles.activeTab : null]} 
+              onPress={showRegisterTab}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabText, !isLoginMode ? styles.activeTabText : null]}>Register</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.inputCard}>
+            <View style={[styles.modeBanner, isLanSignIn ? styles.modeBannerLan : styles.modeBannerWan]}>
+              <Text style={styles.modeBannerLabel}>{bannerTitle}</Text>
+              <Text style={styles.modeBannerText}>{bannerText}</Text>
+            </View>
             
             {!isLoginMode && (
               <>
@@ -212,7 +271,7 @@ export default function WelcomeScreen({ navigation }) {
             />
 
             <AppButton
-              title={isLoginMode ? "Sign In" : "Create Account"}
+              title={primaryButtonTitle}
               text="background"
               disabled={
                 !isValidEmail(email) || 
@@ -225,6 +284,18 @@ export default function WelcomeScreen({ navigation }) {
               loading={loading}
               marginTop={25}
             />
+
+            {isWanSignIn && (
+              <TouchableOpacity style={styles.helperLink} onPress={enterLanMode} activeOpacity={0.8}>
+                <Text style={styles.helperLinkText}>Offline? Click here to log in without internet connection.</Text>
+              </TouchableOpacity>
+            )}
+
+            {isLanSignIn && (
+              <TouchableOpacity style={styles.helperLink} onPress={enterWanMode} activeOpacity={0.8}>
+                <Text style={styles.helperLinkText}>Back to online sign in.</Text>
+              </TouchableOpacity>
+            )}
 
           </View>
         </View>
@@ -293,5 +364,39 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#000',
     fontWeight: 'bold',
-  }
+  },
+  modeBanner: {
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+  modeBannerWan: {
+    backgroundColor: '#eef4ff',
+  },
+  modeBannerLan: {
+    backgroundColor: '#edf8ef',
+  },
+  modeBannerLabel: {
+    color: '#1c1c1c',
+    fontWeight: '700',
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  modeBannerText: {
+    color: '#4d4d4d',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  helperLink: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  helperLinkText: {
+    color: '#0d6b6f',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
 });

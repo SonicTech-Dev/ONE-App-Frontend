@@ -12,6 +12,20 @@ const GENERAL_PASSWORD = "Fayis@123";
 const CLIENT_ID = "ccf1ac952146b11f0904c02dd80f92105";
 const CLIENT_SECRET = "scf1ac95d146b11f0904c02dd80f92105";
 
+const createAuthError = (message, code) => {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+};
+
+const safeParseJson = (value) => {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch (_) {
+    return null;
+  }
+};
+
 export function AuthProvider({ children }) {
   const [lanToken, setLanToken] = useState(null);
   const [wanToken, setWanToken] = useState(null);
@@ -46,27 +60,6 @@ export function AuthProvider({ children }) {
     checkPersistedAuth();
   }, []);
 
-  const determineNetworkMode = async () => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); 
-      const response = await fetch(LAN_BASE_URL + "/device/info", {
-        signal: controller.signal,
-        method: 'GET'
-      });
-      clearTimeout(timeoutId);
-      if (response.ok || response.status === 401 || response.status === 403) {
-        setNetworkMode('LAN');
-        return 'LAN';
-      }
-      setNetworkMode('WAN');
-      return 'WAN';
-    } catch (e) {
-      setNetworkMode('WAN');
-      return 'WAN';
-    }
-  };
-
   const fetchWanToken = async (email, password) => {
     const AUTH_URL = "https://api.ecloud.akubela.com/api/v1.0/invoke/open-ability/method/oauth2/token";
     const body = "username=" + encodeURIComponent(email) +
@@ -75,14 +68,32 @@ export function AuthProvider({ children }) {
       "&client_secret=" + encodeURIComponent(CLIENT_SECRET) +
       "&scope=user&expires_in=100000";
 
-    const response = await fetch(AUTH_URL, {
-      method: "POST",
-      headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" },
-      body,
-    });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error("Failed WAN token: " + JSON.stringify(data));
+    let response;
+    try {
+      response = await fetch(AUTH_URL, {
+        method: "POST",
+        headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" },
+        body,
+      });
+    } catch (error) {
+      throw createAuthError("Ensure you have stable internet connection and try again.", 'WAN_UNREACHABLE');
+    }
+
+    const text = await response.text();
+    const data = safeParseJson(text);
+    if (!response.ok || !data?.success) {
+      if (response.status === 400 || response.status === 401 || response.status === 403) {
+        throw createAuthError("Invalid username or password.", 'INVALID_CREDENTIALS');
+      }
+      throw createAuthError("Unable to sign in right now. Please try again.", 'WAN_TOKEN_FAILED');
+    }
+
     return data.result.access_token;
+  };
+
+  const verifyOnlineAccount = async (email, password) => {
+    await fetchWanToken(email, password);
+    return true;
   };
 
   const fetchLanToken = async (email, password) => {
@@ -91,15 +102,45 @@ export function AuthProvider({ children }) {
       "&password=" + encodeURIComponent(password) +
       "&grant_type=password&expires_in=100000";
 
-    const response = await fetch(AUTH_URL, {
-      method: "POST",
-      headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" },
-      body,
-    });
+    let response;
+    try {
+      response = await fetch(AUTH_URL, {
+        method: "POST",
+        headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" },
+        body,
+      });
+    } catch (error) {
+      console.warn('[AuthContext] LAN auth fetch failed:', AUTH_URL, error?.message || error);
+      throw createAuthError("Unable to sign in offline. Ensure you are connected to home Wi-Fi.", 'LAN_UNREACHABLE');
+    }
+
     const text = await response.text();
-    const data = JSON.parse(text);
-    if (!response.ok || !data.success) throw new Error(`Failed LAN token: ${response.status} ${text}`);
+    const data = safeParseJson(text);
+    if (!response.ok || !data?.success) {
+      if (response.status === 400 || response.status === 401 || response.status === 403) {
+        throw createAuthError("Invalid username or password.", 'INVALID_CREDENTIALS');
+      }
+      throw createAuthError("Unable to sign in offline right now. Please try again.", 'LAN_TOKEN_FAILED');
+    }
+
     return data.result.access_token;
+  };
+
+  const persistSession = async (email, password, mode) => {
+    setUserCredentials({ email, password });
+    setNetworkMode(mode);
+    await AsyncStorage.setItem('activeEmail', email);
+    await AsyncStorage.setItem('activePassword', password);
+    await AsyncStorage.setItem('networkMode', mode);
+  };
+
+  const cacheOfflineUser = async (email, password) => {
+    const usersStr = await AsyncStorage.getItem('savedOfflineUsers');
+    let offlineUsers = {};
+    try { offlineUsers = usersStr ? JSON.parse(usersStr) : {}; } catch (e) {}
+
+    offlineUsers[email] = password;
+    await AsyncStorage.setItem('savedOfflineUsers', JSON.stringify(offlineUsers));
   };
 
   /** Dynamically grabs from cache instantly, or fetches from Network exactly 1 time! */
@@ -121,76 +162,47 @@ export function AuthProvider({ children }) {
     return token;
   };
 
-  const login = async (email, password) => {
-    // 1. Detect if we are physically on the home Wi-Fi (LAN) or out in the world (WAN)
-    const mode = await determineNetworkMode();
-    setUserCredentials({ email, password });
-
+  const loginWan = async (email, password) => {
+    let response;
     try {
-      // 2. ALWAYS attempt the Cloud (Django Proxy) first if the Internet is working!
-      const response = await fetch(`${BACKEND_URL}/api/login/`, {
+      response = await fetch(`${BACKEND_URL}/api/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      
-      if (!response.ok) throw new Error("Invalid online login.");
-
-      // 3. Internet is working and Django confirmed the password! 
-      // Save this user centrally in the offline vault and mark them as the active session.
-      await AsyncStorage.setItem('activeEmail', email);
-      await AsyncStorage.setItem('activePassword', password);
-
-      const usersStr = await AsyncStorage.getItem('savedOfflineUsers');
-      let offlineUsers = {};
-      try { offlineUsers = usersStr ? JSON.parse(usersStr) : {}; } catch (e) {}
-      
-      offlineUsers[email] = password;
-      await AsyncStorage.setItem('savedOfflineUsers', JSON.stringify(offlineUsers));
-
-      // Generate the eCloud WAN Token
-      const wToken = await fetchWanToken(email, password);
-      setWanToken(wToken);
-      await AsyncStorage.setItem('wanToken', wToken);
-
-      // If they happen to be home on the LAN, simultaneously generate the LAN Token too!
-      if (mode === 'LAN') {
-        try {
-          const lToken = await fetchLanToken(email, password);
-          setLanToken(lToken);
-          await AsyncStorage.setItem('lanToken', lToken);
-        } catch (e) {
-          console.warn("LAN detected but panel token rejected.", e);
-        }
-      }
-
-      await AsyncStorage.setItem('networkMode', mode);
-      return { success: true, mode };
-
-    } catch (onlineError) {
-      // 4. OFFLINE FAIL-SAFE: The Internet is completely DOWN or Unreachable!
-      if (mode === 'LAN') {
-        const usersStr = await AsyncStorage.getItem('savedOfflineUsers');
-        let offlineUsers = {};
-        try { offlineUsers = usersStr ? JSON.parse(usersStr) : {}; } catch (e) {}
-        
-        if (offlineUsers[email] && offlineUsers[email] === password) {
-          // Offline Match! Generate LAN token instantly bypassing the cloud.
-          const lToken = await fetchLanToken(email, password);
-          setLanToken(lToken);
-          await AsyncStorage.setItem('lanToken', lToken);
-          
-          await AsyncStorage.setItem('activeEmail', email);
-          await AsyncStorage.setItem('activePassword', password);
-          await AsyncStorage.setItem('networkMode', 'LAN');
-          return { success: true, mode: 'LAN' };
-        } else {
-          throw new Error("Invalid offline credentials. Must sign in online first to cache this user.");
-        }
-      } else {
-        throw new Error("Network offline and no local panel detected.");
-      }
+    } catch (error) {
+      throw createAuthError("Ensure you have stable internet connection and try again.", 'BACKEND_UNREACHABLE');
     }
+
+    if (response.status === 400 || response.status === 401 || response.status === 403) {
+      throw createAuthError("Invalid username or password.", 'INVALID_CREDENTIALS');
+    }
+
+    if (!response.ok) {
+      throw createAuthError("Unable to sign in right now. Please try again.", 'BACKEND_LOGIN_FAILED');
+    }
+
+    const wToken = await fetchWanToken(email, password);
+    setWanToken(wToken);
+    setLanToken(null);
+    await AsyncStorage.setItem('wanToken', wToken);
+    await AsyncStorage.removeItem('lanToken');
+    await persistSession(email, password, 'WAN');
+    await cacheOfflineUser(email, password);
+
+    return { success: true, mode: 'WAN' };
+  };
+
+  const loginLan = async (email, password) => {
+    const lToken = await fetchLanToken(email, password);
+    setLanToken(lToken);
+    setWanToken(null);
+    await AsyncStorage.setItem('lanToken', lToken);
+    await AsyncStorage.removeItem('wanToken');
+    await persistSession(email, password, 'LAN');
+    await cacheOfflineUser(email, password);
+
+    return { success: true, mode: 'LAN' };
   };
 
   const generateGeneralWanToken = async () => fetchWanToken(GENERAL_USERNAME, GENERAL_PASSWORD);
@@ -207,7 +219,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{ 
       lanToken, wanToken, getActiveLanToken, getActiveWanToken,
-      networkMode, isInitializing, login, logout, generateGeneralWanToken
+      networkMode, isInitializing, loginLan, loginWan, logout, generateGeneralWanToken, verifyOnlineAccount
     }}>
       {children}
     </AuthContext.Provider>

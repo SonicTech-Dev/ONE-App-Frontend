@@ -17,4 +17,3 @@ const RTSPViewer = ({ uri, style }) => (
 
 export default RTSPViewer;
 
-
