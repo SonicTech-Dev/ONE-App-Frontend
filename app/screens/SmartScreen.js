@@ -337,36 +337,54 @@ export default function SmartScreen({ navigation }) {
   // This function updates device state based on callback payload.
   // Wrapped in useCallback so CallbackServer never restarts due to a new function reference.
   const handleRequest = useCallback((req, payload) => {
-    // Log the incoming request from the device to your local server
-    try {
-      console.log('[CallbackServer] Incoming callback request:', {
-        method: req?.method,
-        url: req?.url,
-        headers: req?.headers,
-      });
-    } catch {}
-    try {
-      console.log('[CallbackServer] Incoming callback payload:', payload);
-    } catch {}
+    const normalizeStateLabel = (state) => {
+      if (typeof state !== 'string') return null;
+      const normalizedState = state.trim().toLowerCase();
+      if (normalizedState === 'on') return 'On';
+      if (normalizedState === 'off') return 'Off';
+      return normalizedState.charAt(0).toUpperCase() + normalizedState.slice(1);
+    };
 
     if (
       payload?.event_type === 'device' &&
       payload?.data?.payload?.device_id &&
       Array.isArray(payload?.data?.payload?.abilities)
     ) {
-      payload.data.payload.abilities.forEach((ability) => {
-        const deviceId = payload.data.payload.device_id;
-        const state = ability.state; // "on" or "off"
-        setDeviceCategories((prevCats) =>
-          prevCats.map((cat) => ({
-            ...cat,
-            items: cat.items.map((d) =>
-              d.lan?.device_id === deviceId
-                ? { ...d, isOn: state === 'on', status: state === 'on' ? 'On' : 'Off' }
-                : d
-            ),
-          }))
-        );
+      const deviceId = payload.data.payload.device_id;
+      const abilities = payload.data.payload.abilities;
+
+      setDeviceCategories((prevCats) => {
+        return prevCats.map((cat) => ({
+          ...cat,
+          items: cat.items.map((device) => {
+            const matchedAbility = abilities.find((ability) => {
+              const callbackAbilityId = ability?.ability_id;
+              return (
+                device?.lan?.device_id === deviceId &&
+                (!callbackAbilityId || device?.lan?.ability_id === callbackAbilityId)
+              );
+            });
+
+            if (!matchedAbility) {
+              return device;
+            }
+
+            const rawState = matchedAbility?.state;
+            const normalizedState = typeof rawState === 'string' ? rawState.trim().toLowerCase() : null;
+            const nextStatus = normalizeStateLabel(rawState) ?? device.status;
+            const nextIsOn = normalizedState === 'on'
+              ? true
+              : normalizedState === 'off'
+                ? false
+                : device.isOn;
+
+            return {
+              ...device,
+              isOn: nextIsOn,
+              status: nextStatus,
+            };
+          }),
+        }));
       });
     }
   }, []);

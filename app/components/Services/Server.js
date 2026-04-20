@@ -34,14 +34,13 @@ export default function CallbackServer({ port = 8080, onRequest }) {
       setLastCalled(Date.now());
       const payload = parsePayload(req);
       setLastPayload(payload);
-      // Log only the JSON payload, fully expanded
+
       if (onRequest) onRequest(req, payload);
       return { message: 'Received JSON data' };
     });
 
     server.get('/', async (req, res) => {
       setLastCalled(Date.now());
-      console.log('LANServer: Received GET query:', JSON.stringify(req.query, null, 2));
       if (onRequest) onRequest(req, req.query);
       return { message: 'LAN server is running' };
     });
