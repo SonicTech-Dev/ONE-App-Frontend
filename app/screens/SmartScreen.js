@@ -408,15 +408,10 @@ export default function SmartScreen({ navigation }) {
         // WAN eCloud sends empty "sync" frames rather than raw payload bodies.
         // On sync frames, we must poll the latest live states manually from the proxy API
         if (payload?.notice === 'device_listen_notice' && payload?.action === 'sync') {
-          console.log('[SmartScreen] Sync notice received. Fetching full residence device graph from the main Hub...');
           const activeToken = await getActiveWanToken();
           
-          // The main Panel acts as the Hub for the residence.
-          // By querying the Panel's device_id explicitly, Akuvox returns the ENTIRE array of sub-devices.
-          // This allows 1 single API call to sync the entire dashboard instantly without loops or 403 blocks!
-          // Note: using the active mockup residence/device constants.
           const RESIDENCE_ID = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82';
-          const HUB_DEVICE_ID = 'd03852d726b074d77a7d658e7fac7d3b6'; // Fallback onsite id: 'd4f54a92bea2a440c8a6a23d0b636dcf7'
+          const HUB_DEVICE_ID = 'd03852d726b074d77a7d658e7fac7d3b6'; 
 
           const wanBody = {
             command: 'get_device_info',
@@ -437,20 +432,20 @@ export default function SmartScreen({ navigation }) {
 
             if (res.ok) {
               const data = await res.json();
-              if (data?.result && Array.isArray(data.result.devices)) {
-                const validApiDevices = data.result.devices;
+              if (data?.result) {
+                const validApiDevices = Array.isArray(data.result.devices) 
+                  ? data.result.devices 
+                  : [data.result]; // Fallback cleanly if it exclusively returned a single object structure
                 
                 setDeviceCategories((prevCats) => {
                   return prevCats.map((cat) => ({
                     ...cat,
                     items: cat.items.map((device) => {
-                      // Match against the WAN device_id schema
                       const targetId = device?.wan?.device_id || device?.lan?.device_id;
                       const apiDev = validApiDevices.find(d => d.device_id === targetId);
                       
                       if (!apiDev || !Array.isArray(apiDev.abilities)) return device;
                       
-                      // Match against the specific ability targeted in our DOM payload mapping
                       const targetAbilityId = device?.wan?.ability_id || device?.lan?.ability_id;
                       const matchedAbility = apiDev.abilities.find(a => !targetAbilityId || a.ability_id === targetAbilityId);
                       
@@ -481,18 +476,12 @@ export default function SmartScreen({ navigation }) {
                     })
                   }));
                 });
-                console.log('[SmartScreen] Device states successfully synced with Cloud Hub.');
-              } else {
-                 console.warn('[SmartScreen] Hub payload did not contain `devices` array.');
               }
-            } else {
-               console.warn('[SmartScreen] Hub fetch failed:', res.status);
             }
           } catch (fetchErr) {
-            console.warn('[SmartScreen] Network error polling Hub:', fetchErr);
+            // Silently catch fetch errors to avoid spamming the log if connection momentarily drops
           }
         } else {
-          // Pass normal explicitly built bodies down through classic pipeline (often for LAN style proxies)
           handleRequest(null, payload);
         }
       } catch (err) {
