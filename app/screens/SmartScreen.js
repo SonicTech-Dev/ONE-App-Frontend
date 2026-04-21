@@ -18,7 +18,7 @@ import { NetworkInfo } from 'react-native-network-info';
 
 const { Akuvox } = NativeModules;
 const LAN_CALLBACK_CONFIG_URL = 'http://192.168.2.115/api/v1.0/callback';
-const WAN_CALLBACK_CONFIG_URL = `${BACKEND_URL}/callback/`;
+const WAN_CALLBACK_CONFIG_URL = `${BACKEND_URL}/api/register_callback/wan/`;
 
 // SIP credential API constants
 const SIP_REQUEST_ID = 'c45e846ca23ab42c9ae469d988ae32a96';
@@ -390,6 +390,124 @@ export default function SmartScreen({ navigation }) {
       });
     }
   }, []);
+
+  // Connect to the backend WebSocket for WAN callbacks
+  useEffect(() => {
+    if (selectedOption !== 'WAN') return;
+
+    // e.g. ws://one-development.soniciot.com/ws/callbacks/wan/
+    const wsUrl = `${BACKEND_URL.replace(/^http/, 'ws')}/ws/callbacks/wan/`;
+    console.log(`[SmartScreen] Connecting to WAN WebSocket: ${wsUrl}`);
+    const ws = new WebSocket(wsUrl);
+
+    ws.onmessage = async (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        console.log('[SmartScreen] WAN WebSocket received:', payload);
+        
+        // WAN eCloud sends empty "sync" frames rather than raw payload bodies.
+        // On sync frames, we must poll the latest live states manually from the proxy API
+        if (payload?.notice === 'device_listen_notice' && payload?.action === 'sync') {
+          console.log('[SmartScreen] Sync notice received. Fetching full residence device graph from the main Hub...');
+          const activeToken = await getActiveWanToken();
+          
+          // The main Panel acts as the Hub for the residence.
+          // By querying the Panel's device_id explicitly, Akuvox returns the ENTIRE array of sub-devices.
+          // This allows 1 single API call to sync the entire dashboard instantly without loops or 403 blocks!
+          // Note: using the active mockup residence/device constants.
+          const RESIDENCE_ID = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82';
+          const HUB_DEVICE_ID = 'd03852d726b074d77a7d658e7fac7d3b6'; // Fallback onsite id: 'd4f54a92bea2a440c8a6a23d0b636dcf7'
+
+          const wanBody = {
+            command: 'get_device_info',
+            id: 'c45e846ca23ab42c9ae469d988ae32a96',
+            param: { residence_id: RESIDENCE_ID, device_id: HUB_DEVICE_ID },
+          };
+          
+          try {
+            const res = await fetch(`${BACKEND_URL}/device_status/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${activeToken}`
+              },
+              body: JSON.stringify(wanBody)
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data?.result && Array.isArray(data.result.devices)) {
+                const validApiDevices = data.result.devices;
+                
+                setDeviceCategories((prevCats) => {
+                  return prevCats.map((cat) => ({
+                    ...cat,
+                    items: cat.items.map((device) => {
+                      // Match against the WAN device_id schema
+                      const targetId = device?.wan?.device_id || device?.lan?.device_id;
+                      const apiDev = validApiDevices.find(d => d.device_id === targetId);
+                      
+                      if (!apiDev || !Array.isArray(apiDev.abilities)) return device;
+                      
+                      // Match against the specific ability targeted in our DOM payload mapping
+                      const targetAbilityId = device?.wan?.ability_id || device?.lan?.ability_id;
+                      const matchedAbility = apiDev.abilities.find(a => !targetAbilityId || a.ability_id === targetAbilityId);
+                      
+                      if (!matchedAbility) return device;
+
+                      const normalizeStateLabel = (state) => {
+                        if (typeof state !== 'string') return null;
+                        const normalizedState = state.trim().toLowerCase();
+                        if (normalizedState === 'on') return 'On';
+                        if (normalizedState === 'off') return 'Off';
+                        return normalizedState.charAt(0).toUpperCase() + normalizedState.slice(1);
+                      };
+
+                      const rawState = matchedAbility?.state;
+                      const normalizedState = typeof rawState === 'string' ? rawState.trim().toLowerCase() : null;
+                      const nextStatus = normalizeStateLabel(rawState) ?? device.status;
+                      const nextIsOn = normalizedState === 'on' 
+                        ? true 
+                        : normalizedState === 'off' 
+                          ? false 
+                          : device.isOn;
+                      
+                      return {
+                        ...device,
+                        isOn: nextIsOn,
+                        status: nextStatus,
+                      };
+                    })
+                  }));
+                });
+                console.log('[SmartScreen] Device states successfully synced with Cloud Hub.');
+              } else {
+                 console.warn('[SmartScreen] Hub payload did not contain `devices` array.');
+              }
+            } else {
+               console.warn('[SmartScreen] Hub fetch failed:', res.status);
+            }
+          } catch (fetchErr) {
+            console.warn('[SmartScreen] Network error polling Hub:', fetchErr);
+          }
+        } else {
+          // Pass normal explicitly built bodies down through classic pipeline (often for LAN style proxies)
+          handleRequest(null, payload);
+        }
+      } catch (err) {
+        console.warn('[SmartScreen] WAN WebSocket parse/sync error:', err);
+      }
+    };
+
+    ws.onopen = () => console.log('[SmartScreen] WAN WebSocket connected');
+    ws.onclose = () => console.log('[SmartScreen] WAN WebSocket closed');
+    ws.onerror = (e) => console.log('[SmartScreen] WAN WebSocket error:', e);
+
+    return () => {
+      ws.close();
+    };
+  }, [selectedOption, handleRequest, getActiveWanToken]);
 
   // Stable callback-registration status handler — must not be an inline arrow so
   // CallbackRegistration's run-effect dep array stays stable between renders.
