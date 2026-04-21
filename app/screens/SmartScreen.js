@@ -12,11 +12,13 @@ import { INITIAL_DEVICE_CATEGORIES } from '../components/Smart/SmartScreenSectio
 import { controlDevice, deviceStatus } from '../components/Smart/SmartScreenSections/api';
 import styles from '../components/Smart/SmartScreenSections/SmartScreen.styles';
 import DeviceGrid from '../components/Smart/SmartScreenSections/DeviceGrid';
-import { useAuth } from '../context/AuthContext';
+import { BACKEND_URL, useAuth } from '../context/AuthContext';
 import CallbackRegistration from '../components/Services/CallbackRegister';
 import { NetworkInfo } from 'react-native-network-info';
 
 const { Akuvox } = NativeModules;
+const LAN_CALLBACK_CONFIG_URL = 'http://192.168.2.115/api/v1.0/callback';
+const WAN_CALLBACK_CONFIG_URL = `${BACKEND_URL}/callback/`;
 
 // SIP credential API constants
 const SIP_REQUEST_ID = 'c45e846ca23ab42c9ae469d988ae32a96';
@@ -329,8 +331,8 @@ export default function SmartScreen({ navigation }) {
   }, [sipInitialized, selectedOption, lastRegisteredTransport]);
 
   useEffect(() => {
-    if (selectedOption === 'LAN' && !callbackRegistered) {
-      console.log('[SmartScreen] Ready to register callback!');
+    if (!callbackRegistered) {
+      console.log(`[SmartScreen] Ready to register ${selectedOption} callback.`);
     }
   }, [selectedOption, callbackRegistered]);
 
@@ -392,10 +394,12 @@ export default function SmartScreen({ navigation }) {
   // Stable callback-registration status handler — must not be an inline arrow so
   // CallbackRegistration's run-effect dep array stays stable between renders.
   const handleCallbackStatus = useCallback((status, res) => {
-    console.log('[SmartScreen] Callback registration status:', status, res);
+    console.log(`[SmartScreen] ${selectedOption} callback registration status:`, status, res);
     if (status === 'success') setCallbackRegistered(true);
-    if (status === 'error') console.log('Callback Registration Error', res?.message || 'Failed to register callback.');
-  }, []);
+    if (status === 'error') {
+      console.log(`[SmartScreen] ${selectedOption} callback registration error:`, res?.message || 'Failed to register callback.');
+    }
+  }, [selectedOption]);
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, 166],
@@ -536,9 +540,14 @@ export default function SmartScreen({ navigation }) {
   // Build callback URL strictly with IPv4. Fallback to prior static IPv4 if detection fails.
   const callbackHost = localIpv4 && ipv4Regex.test(localIpv4) ? localIpv4 : '192.168.2.105';
   const callbackUrl = `http://${callbackHost}:8080/`;
+  const activeCallbackConfigUrl = selectedOption === 'WAN' ? WAN_CALLBACK_CONFIG_URL : LAN_CALLBACK_CONFIG_URL;
   useEffect(() => {
     console.log('[SmartScreen] Callback URL (listening):', callbackUrl);
-  }, [callbackUrl]);
+    console.log('[SmartScreen] Callback registration endpoint:', activeCallbackConfigUrl);
+    if (selectedOption === 'WAN' && ipv4Regex.test(callbackHost)) {
+      console.warn('[SmartScreen] WAN callback target is using a private/local IPv4 address. WAN registration may succeed, but cloud callback delivery will fail unless this address is publicly reachable.');
+    }
+  }, [activeCallbackConfigUrl, callbackHost, callbackUrl, selectedOption]);
 
   return (
     <Screen>
@@ -554,12 +563,13 @@ export default function SmartScreen({ navigation }) {
       {/* LAN Server for API */}
       <CallbackServer port={8080} onRequest={handleRequest} />
 
-      {selectedOption === 'LAN' && !callbackRegistered && (
+      {!callbackRegistered && (
         <CallbackRegistration
-          deviceCallbackUrl="http://192.168.2.115/api/v1.0/callback"
+          deviceCallbackUrl={activeCallbackConfigUrl}
           callbackUrl={callbackUrl}
           callbackId="c45e846ca23ab42c9ae469d988ae32a96"
           listenList={['device']}
+          networkMode={selectedOption}
           run={true}
           onStatus={handleCallbackStatus}
         />

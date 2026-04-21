@@ -1,52 +1,70 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
+function maskAuthorizationHeader(headers) {
+  if (!headers?.Authorization) return headers;
+  const token = headers.Authorization.replace(/^Bearer\s+/i, '');
+  const maskedToken = token.length > 12
+    ? `${token.slice(0, 6)}...${token.slice(-4)}`
+    : '***';
+
+  return {
+    ...headers,
+    Authorization: `Bearer ${maskedToken}`,
+  };
+}
+
 export default function CallbackRegistration({
   deviceCallbackUrl, // e.g. http://192.168.2.115/api/v1.0/callback
   callbackUrl,       // e.g. http://<your-ip>:8080/
   callbackId,
   listenList,
+  networkMode = 'LAN',
   run,
   onStatus,          // function(status: 'success' | 'error', data?: any)
 }) {
-  const { getActiveLanToken } = useAuth();
-  const [lanHeaders, setLanHeaders] = useState(null);
+  const { getActiveLanToken, getActiveWanToken } = useAuth();
+  const [authHeaders, setAuthHeaders] = useState(null);
   // headersLoading starts true so the run-effect waits silently until the async
   // token fetch either succeeds or fails before deciding to warn.
   const [headersLoading, setHeadersLoading] = useState(true);
   // Always hold the latest onStatus reference without putting it in effect deps.
   const onStatusRef = useRef(onStatus);
   useEffect(() => { onStatusRef.current = onStatus; });
+  const modeLabel = (networkMode || 'LAN').toUpperCase();
 
-  // Build LAN headers once on mount
+  // Build auth headers whenever the selected transport changes.
   useEffect(() => {
     let mounted = true;
     (async () => {
+      setHeadersLoading(true);
       try {
-        const token = await getActiveLanToken();
+        const token = modeLabel === 'WAN'
+          ? await getActiveWanToken()
+          : await getActiveLanToken();
         const headers = { 'Authorization': `Bearer ${token}` };
         if (mounted) {
-          setLanHeaders(headers);
-          console.log('[CallbackRegistration] Built LAN headers:', headers);
+          setAuthHeaders(headers);
+          console.log(`[CallbackRegistration][${modeLabel}] Built auth headers:`, maskAuthorizationHeader(headers));
         }
       } catch (err) {
-        console.error('[CallbackRegistration] Failed to build LAN headers:', err);
-        if (mounted) setLanHeaders(null);
+        console.error(`[CallbackRegistration][${modeLabel}] Failed to build auth headers:`, err);
+        if (mounted) setAuthHeaders(null);
       } finally {
         if (mounted) setHeadersLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [getActiveLanToken, getActiveWanToken, modeLabel]);
 
   // Register callback when run=true and headers are settled
   useEffect(() => {
     if (!run) return;
     // Silently wait while the token fetch is still in-flight
     if (headersLoading) return;
-    if (!lanHeaders || typeof lanHeaders !== 'object') {
-      console.warn('[CallbackRegistration] LAN headers not ready, cannot register callback.');
-      onStatusRef.current?.('error', { message: 'LAN headers not ready' });
+    if (!authHeaders || typeof authHeaders !== 'object') {
+      console.warn(`[CallbackRegistration][${modeLabel}] Auth headers not ready, cannot register callback.`);
+      onStatusRef.current?.('error', { message: `${modeLabel} auth headers not ready` });
       return;
     }
 
@@ -65,13 +83,14 @@ export default function CallbackRegistration({
 
         // Log the outgoing request
         const reqHeaders = {
-          ...lanHeaders,
+          ...authHeaders,
           'Content-Type': 'application/json',
           Accept: 'application/json',
         };
-        console.log('[CallbackRegistration] Request URL:', deviceCallbackUrl);
-        console.log('[CallbackRegistration] Request Headers:', reqHeaders);
-        console.log('[CallbackRegistration] Request Payload:', payload);
+        console.log(`[CallbackRegistration][${modeLabel}] Request URL:`, deviceCallbackUrl);
+        console.log(`[CallbackRegistration][${modeLabel}] Callback target URL:`, callbackUrl);
+        console.log(`[CallbackRegistration][${modeLabel}] Request Headers:`, maskAuthorizationHeader(reqHeaders));
+        console.log(`[CallbackRegistration][${modeLabel}] Request Payload:`, payload);
 
         const response = await fetch(deviceCallbackUrl, {
           method: 'POST',
@@ -92,9 +111,9 @@ export default function CallbackRegistration({
         try { data = text ? JSON.parse(text) : null; } catch {}
 
         // Log the response
-        console.log('[CallbackRegistration] Response Status:', response.status, response.statusText);
-        console.log('[CallbackRegistration] Response Headers:', respHeaders);
-        console.log('[CallbackRegistration] Response Body:', data ?? text);
+        console.log(`[CallbackRegistration][${modeLabel}] Response Status:`, response.status, response.statusText);
+        console.log(`[CallbackRegistration][${modeLabel}] Response Headers:`, respHeaders);
+        console.log(`[CallbackRegistration][${modeLabel}] Response Body:`, data ?? text);
 
         // Pass parsed data (if any) to onStatus
         if (response.ok) {
@@ -104,7 +123,7 @@ export default function CallbackRegistration({
         }
       } catch (error) {
         if (error.name === 'AbortError') return;
-        console.error('[CallbackRegistration] Network/Error:', error);
+        console.error(`[CallbackRegistration][${modeLabel}] Network/Error:`, error);
         onStatusRef.current?.('error', { message: error.message || 'Network error' });
       }
     };
@@ -113,7 +132,7 @@ export default function CallbackRegistration({
     return () => controller.abort();
   // onStatus intentionally excluded — it's accessed via onStatusRef to prevent
   // the effect from re-firing on every SmartScreen render.
-  }, [run, headersLoading, lanHeaders, deviceCallbackUrl, callbackUrl, callbackId, listenList]);
+  }, [run, headersLoading, authHeaders, deviceCallbackUrl, callbackUrl, callbackId, listenList, modeLabel]);
 
   return null;
 }
