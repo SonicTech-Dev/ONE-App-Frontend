@@ -30,7 +30,7 @@ const StatsSection = ({ selectedOption, setSelectedOption, lanHeaders }) => {
         {/* Smart Lock */}
         <TouchableOpacity 
           style={styles.actionButtonWrapper} 
-          onPress={() => navigation.navigate('SmartLockScreen')}
+          onPress={() => navigation.navigate('SmartLockScreen', { selectedOption })}
           activeOpacity={0.7}
         >
           <View style={[styles.actionButtonIcon, { backgroundColor: '#efe6ff' }]}>
