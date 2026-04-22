@@ -10,6 +10,7 @@ import {
   NativeEventEmitter,
   requireNativeComponent,
   UIManager,
+  Dimensions,
 } from 'react-native';
 import Screen from '../../Screen';
 import useColors from '../../../hooks/useColors';
@@ -70,10 +71,6 @@ export default function SmartLockScreen({ route }) {
       : 'WAN';
   const wanRtspUrl = route?.params?.wanRtspUrl || FALLBACK_WAN_RTSP_URL;
   const wanCiphertext = route?.params?.wanCiphertext || FALLBACK_WAN_CIPHERTEXT;
-  const wanWakeupUrl = route?.params?.wanWakeupUrl || null;
-  const wanWakeupMethod = route?.params?.wanWakeupMethod || 'POST';
-  const wanWakeupBody = route?.params?.wanWakeupBody;
-  const wanWakeupHeaders = route?.params?.wanWakeupHeaders || { 'Content-Type': 'application/json' };
 
   // Device config — IDs are fixed per residence, IP is resolved automatically
   const residenceId = 'rabd2c6d2aecc4ce3be11e25b4ecd3c82';
@@ -85,7 +82,6 @@ export default function SmartLockScreen({ route }) {
 
   // IP is NOT hardcoded — loaded from cache (written by SDK after first connect)
   const [deviceIp, setDeviceIp] = useState(DEVICE_IP);
-  const [detectedIp, setDetectedIp] = useState(null); // IP confirmed by SDK via rtspUrl
 
   // UI state
   const [isReady, setIsReady] = useState(false);   // true once initLockConfig delay passes
@@ -215,21 +211,6 @@ export default function SmartLockScreen({ route }) {
       return;
     }
 
-    // Optional WAN wake-up API hook. Populate through route params when available.
-    if (wanWakeupUrl) {
-      try {
-        console.log('[SmartLock] WAN wake-up call started', { wanWakeupUrl, wanWakeupMethod });
-        const wakeResp = await fetch(wanWakeupUrl, {
-          method: wanWakeupMethod,
-          headers: wanWakeupHeaders,
-          body: wanWakeupBody ? JSON.stringify(wanWakeupBody) : undefined,
-        });
-        console.log('[SmartLock] WAN wake-up response', { status: wakeResp.status, ok: wakeResp.ok });
-      } catch (wakeErr) {
-        console.log('[SmartLock] WAN wake-up failed (continuing monitor start)', wakeErr?.message || wakeErr);
-      }
-    }
-
     const wanRes = await safePromiseCall(
       'startWanMonitor',
       [wanRtspUrl, wanCiphertext],
@@ -244,6 +225,12 @@ export default function SmartLockScreen({ route }) {
       startInFlightRef.current = false;
       return;
     }
+
+    // Apply monitor state immediately when native start succeeds.
+    setMonitorId(wanRes.monitorId);
+    setIsMonitoring(true);
+    setVideoError('');
+    setLoading(false);
 
     startInFlightRef.current = false;
   }, [
@@ -349,7 +336,23 @@ export default function SmartLockScreen({ route }) {
   };
 
   const handleTogglePlay = () => {
-    setIsPlaying((prev) => !prev);
+    const nextPlaying = !isPlayingRef.current;
+    setIsPlaying(nextPlaying);
+
+    if (!isReady) {
+      return;
+    }
+
+    if (nextPlaying) {
+      setRetryCount(0);
+      stopCurrentMonitorRef.current();
+      setTimeout(() => {
+        startMonitorRef.current();
+      }, 150);
+      return;
+    }
+
+    stopCurrentMonitorRef.current();
   };
 
   // ── Step 1: once IP is known, start the SDK ──────────────────────────────
@@ -390,7 +393,6 @@ export default function SmartLockScreen({ route }) {
           const sdkIp = extractIpFromRtspUrl(event.rtspUrl);
           if (sdkIp) {
             console.log('[SmartLock] SDK detected IP from rtspUrl:', sdkIp);
-            setDetectedIp(sdkIp);
           }
           setLoading(true);
           const res = await safePromiseCall(
@@ -402,6 +404,10 @@ export default function SmartLockScreen({ route }) {
           setLoading(false);
           if (!res || !res.monitorId || res.monitorId <= 0) {
             setVideoError('Failed to start LAN monitor');
+          } else {
+            setMonitorId(res.monitorId);
+            setIsMonitoring(true);
+            setVideoError('');
           }
         }
         if (event?.status === 'rtspStop') {
@@ -491,24 +497,18 @@ export default function SmartLockScreen({ route }) {
   }, [deviceIp]);
 
   useEffect(() => {
-    if (!isReady) return;
-
-    console.log('[SmartLock] monitor mode/play update', {
-      selectedOption,
-      isPlaying,
-    });
-
-    if (isPlaying) {
-      setRetryCount(0);
-      stopCurrentMonitor();
-      setTimeout(() => {
-        startMonitorRef.current();
-      }, 150);
+    if (!isReady || !isPlayingRef.current) {
       return;
     }
 
-    stopCurrentMonitor();
-  }, [isReady, isPlaying, selectedOption, startMonitor, stopCurrentMonitor]);
+    console.log('[SmartLock] selectedOption changed while playing. Restarting monitor.', {
+      selectedOption,
+    });
+    stopCurrentMonitorRef.current();
+    setTimeout(() => {
+      startMonitorRef.current();
+    }, 150);
+  }, [isReady, selectedOption]);
 
   const renderVideoArea = () => {
     if (!isPlaying) {
@@ -570,15 +570,6 @@ export default function SmartLockScreen({ route }) {
           <View style={[styles.metaChip, styles.metaChipSoft]}>
             <Text style={styles.metaTextSoft}>{isMonitoring ? 'Live' : 'Standby'}</Text>
           </View>
-          {detectedIp ? (
-            <View style={[styles.metaChip, { borderColor: '#b8f5c8' }]}>
-              <Text style={[styles.metaText, { color: '#1a7a3a' }]}>IP: {detectedIp}</Text>
-            </View>
-          ) : deviceIp ? (
-            <View style={[styles.metaChip, { borderColor: '#fde68a' }]}>
-              <Text style={[styles.metaText, { color: '#92400e' }]}>IP: {deviceIp} (cached)</Text>
-            </View>
-          ) : null}
         </View>
 
         <View style={styles.lockCard}>
@@ -739,7 +730,7 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     width: '100%',
-    aspectRatio: 1.58,
+    height: Math.round(Dimensions.get('window').height * 0.45),
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
