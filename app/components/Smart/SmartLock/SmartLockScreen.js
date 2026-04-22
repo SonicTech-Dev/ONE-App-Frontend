@@ -220,8 +220,11 @@ export default function SmartLockScreen({ route }) {
     console.log('[SmartLock] startWanMonitor result', wanRes);
 
     if (!wanRes || !wanRes.monitorId || wanRes.monitorId <= 0) {
-      setLoading(false);
-      setVideoError('Failed to start WAN monitor');
+      // WAN often needs a short retry window before emitting a valid monitor ID.
+      // Keep showing the connecting state instead of a transient failure message.
+      setVideoError('');
+      setLoading(true);
+      retryMonitorRef.current('wanStartPending');
       startInFlightRef.current = false;
       return;
     }
@@ -401,12 +404,17 @@ export default function SmartLockScreen({ route }) {
             'Failed to start LAN monitoring'
           );
           console.log('[SmartLock] startMonitorViaLAN result', res);
-          setLoading(false);
-          if (!res || !res.monitorId || res.monitorId <= 0) {
+          if (!res) {
+            setLoading(false);
             setVideoError('Failed to start LAN monitor');
-          } else {
+          } else if (res.monitorId > 0) {
+            setLoading(false);
             setMonitorId(res.monitorId);
             setIsMonitoring(true);
+            setVideoError('');
+          } else {
+            // SDK commonly returns 0 here and emits the real monitorId through
+            // onMonitorEstablished a moment later. Keep the loading state alive.
             setVideoError('');
           }
         }
@@ -445,8 +453,8 @@ export default function SmartLockScreen({ route }) {
       const wanStartedSub = eventEmitter.addListener('onWanMonitorStarted', (event) => {
         console.log('[SmartLock] onWanMonitorStarted', event);
         if (!event || event.monitorId <= 0) {
-          setLoading(false);
-          setVideoError('Failed to start WAN monitor');
+          setVideoError('');
+          setLoading(true);
           retryMonitor('wanMonitorStartFailed');
         }
       });
@@ -463,8 +471,13 @@ export default function SmartLockScreen({ route }) {
 
       const rtspErrorSub = eventEmitter.addListener('onRtspError', (event) => {
         console.log('[SmartLock] onRtspError', event);
-        setLoading(false);
-        setVideoError(`RTSP error: ${event?.error || 'Unknown error'}`);
+        setLoading(true);
+        if (selectedOptionRef.current === 'LAN') {
+          setVideoError(`RTSP error: ${event?.error || 'Unknown error'}`);
+        } else {
+          // For WAN, suppress transient startup errors and show connecting UI.
+          setVideoError('');
+        }
         retryMonitor('rtspError');
       });
 
