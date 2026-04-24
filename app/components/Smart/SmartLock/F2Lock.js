@@ -1,66 +1,385 @@
-import React, { useMemo } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import Screen from '../../Screen';
+import { useAuth } from '../../../context/AuthContext';
+import { controlDevice, deviceStatus as fetchDeviceStatus } from '../SmartScreenSections/api';
 
-export default function F2LockModal({
-  visible,
-  onClose,
-  device,
-  deviceStatus,
-  onToggleLock,
-  lockLoading
-}) {
-  // Handles both LAN and WAN responses
+// Optional manual mapping for F2 lock. Fill values to force direct control
+// without relying on auto-discovery.
+const MANUAL_F2_LOCK_CONFIG = {
+  LAN: {
+    device_id: 'df3434dc6455f76c62d5f5b047ca2653',
+    ability_id: 'lock.2d11f2a68c6846c010e476adcf661165',
+    commandPair: { on: 'turn_off', off: 'turn_on' },
+  },
+  WAN: {
+    device_id: 'da1932e4497b34eb6b59cb3a0c5343b3a',
+    ability_id: 'e30063259a5e24fda82ceea43f978f7c1',
+    commandPair: { on: 'turn_off', off: 'turn_on' },
+  },
+};
 
-  let lockState = "unknown";
-  let battery = undefined;
-  let tamperState = "unknown";
+function normalizeMode(mode) {
+  const parsed = String(mode || '').toUpperCase();
+  return parsed === 'LAN' || parsed === 'WAN' ? parsed : 'WAN';
+}
+
+function parseLockViewState(deviceStatus, device) {
+  let lockState = 'unknown';
+  let battery;
+  let tamperState = 'unknown';
   let online = null;
-  let deviceType = "";
-  let productName = "";
+  let deviceType = '';
+  let productName = '';
 
   const result = deviceStatus?.result || deviceStatus;
   const abilities = result?.abilities || [];
 
-  // Lock State: ability_type === "lock"
-  // LAN: state is "on" -> "locked", "off" -> "unlocked"
-  // WAN: state may be "locked"/"unlocked"
-  const lockAbility = abilities.find(a =>
-    (a.ability_type && a.ability_type.toLowerCase() === "lock")
+  const lockAbility = abilities.find((a) =>
+    a?.ability_type && String(a.ability_type).toLowerCase() === 'lock'
   );
   if (lockAbility && lockAbility.state !== undefined) {
-    if (lockAbility.state === "on") {
-      lockState = "locked";
-    } else if (lockAbility.state === "off") {
-      lockState = "unlocked";
-    } else if (
-      lockAbility.state === "locked" ||
-      lockAbility.state === "unlocked"
-    ) {
-      lockState = lockAbility.state;
-    } else {
-      lockState = String(lockAbility.state);
-    }
+    const raw = String(lockAbility.state).toLowerCase();
+    // F2 reports lock state inverted vs C6/other locks for on/off values.
+    if (raw === 'on') lockState = 'unlocked';
+    else if (raw === 'off') lockState = 'locked';
+    else if (raw === 'locked' || raw === 'unlocked') lockState = raw;
+    else lockState = String(lockAbility.state);
   }
 
-  // Battery Level: ability_name === "battery"
-  const batteryAbility = abilities.find(a =>
-    a.ability_name && a.ability_name.toLowerCase() === "battery"
+  const batteryAbility = abilities.find(
+    (a) => a?.ability_name && String(a.ability_name).toLowerCase() === 'battery'
   );
   if (batteryAbility && batteryAbility.state !== undefined) {
     battery = batteryAbility.state;
   }
 
-  // Tamper Alarm: ability_name === "tamper"
-  const tamperAbility = abilities.find(a =>
-    a.ability_name && a.ability_name.toLowerCase() === "tamper"
-  );
+  const tamperAbility = abilities.find((a) => {
+    const abilityName = String(a?.ability_name || '').toLowerCase();
+    const abilityType = String(a?.ability_type || '').toLowerCase();
+    const attributeType = String(a?.attribute?.type || '').toLowerCase();
+    const abilityId = String(a?.ability_id || '').toLowerCase();
+
+    if (abilityName === 'tamper') return true;
+    if (abilityName === 'tamper alarm' && attributeType === 'tamper') return true;
+    if (abilityType === 'tamper') return true;
+    if (abilityId.includes('tamper')) return true;
+    return false;
+  });
   if (tamperAbility && tamperAbility.state !== undefined) {
     tamperState = tamperAbility.state;
   }
 
   online = result?.online;
-  deviceType = result?.device_type || device?.device_type || "";
-  productName = result?.product_name || result?.device_name || device?.product_name || device?.device_name || "";
+  deviceType = result?.device_type || device?.device_type || '';
+  productName =
+    result?.product_name ||
+    result?.device_name ||
+    device?.product_name ||
+    device?.device_name ||
+    '';
+
+  return {
+    lockState,
+    battery,
+    tamperState,
+    online,
+    deviceType,
+    productName,
+  };
+}
+
+export default function F2LockModal({
+  visible,
+  onClose,
+  device,
+  deviceStatus: modalDeviceStatus,
+  onToggleLock,
+  lockLoading,
+  route,
+  navigation
+}) {
+  const isScreenMode = Boolean(route && navigation && typeof visible === 'undefined');
+  const { networkMode, getActiveLanToken, getActiveWanToken } = useAuth();
+
+  const [screenStatus, setScreenStatus] = useState(null);
+  const [screenDevice, setScreenDevice] = useState(null);
+  const [screenDeviceMeta, setScreenDeviceMeta] = useState(null);
+  const [screenLoading, setScreenLoading] = useState(false);
+  const [screenLockLoading, setScreenLockLoading] = useState(false);
+  const [screenError, setScreenError] = useState('');
+
+  const selectedOptionFromRoute = normalizeMode(route?.params?.selectedOption || networkMode);
+  const lockTitle = route?.params?.lockTitle || 'F2 SmartLock';
+
+  const getManualConfig = useCallback(() => {
+    // Route params can override constants if needed.
+    const routeDeviceId = route?.params?.manualDeviceId;
+    const routeAbilityId = route?.params?.manualAbilityId;
+    if (routeDeviceId && routeAbilityId) {
+      return {
+        device_id: routeDeviceId,
+        ability_id: routeAbilityId,
+        commandPair: { on: 'turn_off', off: 'turn_on' },
+      };
+    }
+
+    const modeConfig = MANUAL_F2_LOCK_CONFIG[selectedOptionFromRoute];
+    if (modeConfig?.device_id && modeConfig?.ability_id) {
+      return modeConfig;
+    }
+    return null;
+  }, [route?.params?.manualAbilityId, route?.params?.manualDeviceId, selectedOptionFromRoute]);
+
+  const getHeaders = useCallback(async () => {
+    const token = selectedOptionFromRoute === 'LAN'
+      ? await getActiveLanToken()
+      : await getActiveWanToken();
+    return {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    };
+  }, [getActiveLanToken, getActiveWanToken, selectedOptionFromRoute]);
+
+  const loadDirectStatusByDeviceId = useCallback(
+    async (deviceId) => {
+      const headers = await getHeaders();
+      await fetchDeviceStatus(deviceId, selectedOptionFromRoute, setScreenStatus, headers);
+    },
+    [getHeaders, selectedOptionFromRoute]
+  );
+
+  const loadManualF2Status = useCallback(async () => {
+    if (!isScreenMode) return;
+
+    setScreenLoading(true);
+    setScreenError('');
+    try {
+      const manualConfig = getManualConfig();
+      if (manualConfig) {
+        setScreenDeviceMeta({
+          title: lockTitle,
+          device_name: lockTitle,
+          product_name: 'Manual Mapping',
+          device_type: 'F2',
+        });
+        setScreenDevice({
+          device_id: manualConfig.device_id,
+          ability_id: manualConfig.ability_id,
+          commandPair: manualConfig.commandPair || { on: 'turn_on', off: 'turn_off' },
+        });
+        await loadDirectStatusByDeviceId(manualConfig.device_id);
+      } else {
+        throw new Error(
+          `Manual F2 mapping missing for ${selectedOptionFromRoute}. Set device_id and ability_id in MANUAL_F2_LOCK_CONFIG.`
+        );
+      }
+    } catch (e) {
+      setScreenError(e?.message || 'Failed to load F2 lock status.');
+    } finally {
+      setScreenLoading(false);
+    }
+  }, [getManualConfig, isScreenMode, loadDirectStatusByDeviceId, lockTitle, selectedOptionFromRoute]);
+
+  const handleScreenSetLock = useCallback(async (targetAction) => {
+    if (!screenDevice?.device_id || !screenDevice?.ability_id) {
+      Alert.alert('F2 Lock', 'F2 lock device is not ready yet.');
+      return;
+    }
+
+    setScreenLockLoading(true);
+    try {
+      const headers = await getHeaders();
+      const primaryCommand = targetAction === 'lock'
+        ? screenDevice.commandPair.on
+        : screenDevice.commandPair.off;
+      const fallbackCommands = targetAction === 'lock'
+        ? ['lock', 'turn_on', 'on', 'close']
+        : ['unlock', 'turn_off', 'off', 'open'];
+
+      const commandCandidates = [
+        primaryCommand,
+        ...fallbackCommands,
+      ].filter((v, index, arr) => !!v && arr.indexOf(v) === index);
+
+      let controlSucceeded = false;
+
+      for (const command of commandCandidates) {
+        const response = await controlDevice(
+          screenDevice.device_id,
+          screenDevice.ability_id,
+          command,
+          null,
+          selectedOptionFromRoute,
+          headers,
+          { suppressErrorAlert: true }
+        );
+
+        if (response?.ok) {
+          controlSucceeded = true;
+          break;
+        }
+      }
+
+      if (!controlSucceeded) {
+        throw new Error(`Failed to ${targetAction} the F2 lock. Please verify ability ID and command mapping.`);
+      }
+
+      await loadDirectStatusByDeviceId(screenDevice.device_id);
+      setScreenError('');
+    } catch (err) {
+      const message = err?.message || `Failed to ${targetAction} the F2 lock.`;
+      setScreenError(message);
+      Alert.alert('F2 Lock', message);
+    } finally {
+      setScreenLockLoading(false);
+    }
+  }, [getHeaders, loadDirectStatusByDeviceId, screenDevice, selectedOptionFromRoute]);
+
+  useEffect(() => {
+    if (isScreenMode) {
+      loadManualF2Status();
+    }
+  }, [isScreenMode, loadManualF2Status]);
+
+  if (isScreenMode) {
+    const lockView = parseLockViewState(screenStatus, screenDeviceMeta);
+
+    return (
+      <Screen style={styles.screenRoot}>
+        <View style={styles.screenContent}>
+          <View style={styles.screenHeaderCard}>
+            <Text style={styles.screenTitle}>{lockTitle}</Text>
+            <Text style={styles.screenSubtitle}>F2 lock control and live status page.</Text>
+            <View style={styles.modePill}>
+              <Text style={styles.modePillText}>Current Mode: {selectedOptionFromRoute}</Text>
+            </View>
+          </View>
+
+          <View style={styles.infoCard}>
+            {screenLoading ? (
+              <View style={styles.loaderWrap}>
+                <ActivityIndicator size="large" color="#6f4bd8" />
+                <Text style={styles.loadingText}>Loading F2 lock status...</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.infoTitle}>{screenDeviceMeta?.device_name || lockTitle}</Text>
+                <View style={styles.statusRow}>
+                  <Text style={styles.label}>Online Status:</Text>
+                  <Text
+                    style={[
+                      styles.value,
+                      lockView.online === true
+                        ? styles.online
+                        : styles.offline,
+                    ]}
+                  >
+                    {lockView.online === true
+                      ? 'Online'
+                      : lockView.online === false
+                        ? 'Offline'
+                        : 'Unknown'}
+                  </Text>
+                </View>
+                <View style={styles.statusRow}>
+                  <Text style={styles.label}>Lock State:</Text>
+                  <Text
+                    style={[
+                      styles.value,
+                      lockView.lockState === 'locked'
+                        ? styles.on
+                        : lockView.lockState === 'unlocked'
+                          ? styles.off
+                          : styles.unknown,
+                    ]}
+                  >
+                    {lockView.lockState === 'locked'
+                      ? 'Locked'
+                      : lockView.lockState === 'unlocked'
+                        ? 'Unlocked'
+                        : String(lockView.lockState)}
+                  </Text>
+                </View>
+                <View style={styles.statusRow}>
+                  <Text style={styles.label}>Tamper Alarm:</Text>
+                  <Text
+                    style={[
+                      styles.value,
+                      lockView.tamperState === 'on'
+                        ? styles.on
+                        : lockView.tamperState === 'off'
+                          ? styles.off
+                          : styles.unknown,
+                    ]}
+                  >
+                    {lockView.tamperState === 'on'
+                      ? 'TAMPERED'
+                      : lockView.tamperState === 'off'
+                        ? 'OK'
+                        : String(lockView.tamperState)}
+                  </Text>
+                </View>
+
+                {lockView.battery !== undefined && (
+                  <View style={styles.statusRow}>
+                    <Text style={styles.label}>Battery:</Text>
+                    <Text style={styles.value}>
+                      {lockView.battery !== 'unknown'
+                        ? `${lockView.battery}%`
+                        : 'unknown'}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+
+          {screenError ? <Text style={styles.screenError}>{screenError}</Text> : null}
+
+          <TouchableOpacity
+            style={styles.refreshButton}
+            activeOpacity={0.88}
+            onPress={loadManualF2Status}
+            disabled={screenLoading}
+          >
+            <Text style={styles.refreshButtonText}>Refresh Status</Text>
+          </TouchableOpacity>
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.lockActionButton, (!screenStatus || screenLockLoading) && styles.disabledButton]}
+              activeOpacity={0.88}
+              onPress={() => handleScreenSetLock('lock')}
+              disabled={!screenStatus || screenLockLoading}
+            >
+              <Text style={styles.actionButtonText}>Lock</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.unlockActionButton, (!screenStatus || screenLockLoading) && styles.disabledButton]}
+              activeOpacity={0.88}
+              onPress={() => handleScreenSetLock('unlock')}
+              disabled={!screenStatus || screenLockLoading}
+            >
+              {screenLockLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>Unlock</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
+  // Handles both LAN and WAN responses
+
+  const parsed = parseLockViewState(modalDeviceStatus, device);
+  const lockState = parsed.lockState;
+  const battery = parsed.battery;
+  const tamperState = parsed.tamperState;
+  const online = parsed.online;
+  const deviceType = parsed.deviceType;
+  const productName = parsed.productName;
 
   const isLocked = useMemo(() => lockState === "locked", [lockState]);
 
@@ -77,7 +396,7 @@ export default function F2LockModal({
             <Text style={{ fontSize: 22 }}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{device?.title || productName || deviceType}</Text>
-          {!deviceStatus ? (
+          {!modalDeviceStatus ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
               <ActivityIndicator size="large" color="#32d2d6" />
             </View>
@@ -144,6 +463,125 @@ export default function F2LockModal({
 }
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    backgroundColor: '#f4f0ff',
+  },
+  screenContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    gap: 14,
+  },
+  screenHeaderCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: '#e7dcff',
+    alignItems: 'center',
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#2d2f4f',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  screenSubtitle: {
+    fontSize: 14,
+    color: '#667085',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modePill: {
+    alignSelf: 'center',
+    borderRadius: 999,
+    backgroundColor: '#efe6ff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  modePillText: {
+    color: '#5d41b0',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  infoCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: '#e7dcff',
+  },
+  loaderWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#5d41b0',
+    fontWeight: '600',
+  },
+  screenError: {
+    color: '#b42318',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  refreshButton: {
+    width: '92%',
+    alignSelf: 'center',
+    backgroundColor: '#efe6ff',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d9c9ff',
+  },
+  refreshButtonText: {
+    color: '#5d41b0',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  actionRow: {
+    width: '92%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  lockActionButton: {
+    backgroundColor: '#6f4bd8',
+  },
+  unlockActionButton: {
+    backgroundColor: '#fd5f43',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  infoTitle: {
+    fontSize: 18,
+    color: '#25344d',
+    fontWeight: '800',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#6c7a90',
+    lineHeight: 20,
+  },
   modalBackground: {
     flex: 1,
     backgroundColor: 'rgba(111,75,216,0.22)',

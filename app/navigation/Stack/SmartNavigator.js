@@ -4,6 +4,8 @@ import { createStackNavigator } from "@react-navigation/stack";
 import SmartScreen from "../../screens/SmartScreen";
 import SdkTest from "../../screens/SdkTest"; // <-- Import your SDK Usage screen
 import SmartLockScreen from "../../components/Smart/SmartLock/SmartLockScreen";
+import SL50LockScreen from "../../components/Smart/SmartLock/SL50Lock";
+import F2Lock from "../../components/Smart/SmartLock/F2Lock";
 import IntercomScreen from "../../components/Smart/Intercom/Intercom"
 import DeviceStatuses from "../../components/Smart/DeviceStatuses";
 import IPCamera from "../../components/Smart/IPCameras/IPCamera";
@@ -36,6 +38,20 @@ const SmartNavigator = ({ route, navigation }) => {
           headerShown: false,
         }}
         />
+      <Stack.Screen
+        name="SL50LockScreen"
+        component={SL50LockScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="F2Lock"
+        component={F2Lock}
+        options={{
+          headerShown: false,
+        }}
+      />
       <Stack.Screen
         name="IntercomScreen"
         component={IntercomScreen}

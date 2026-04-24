@@ -7,7 +7,10 @@ export const controlDevice = async (
   attribute,
   selectedOption,
   HEADERS,
+  options = {},
 ) => {
+  const { suppressErrorAlert = false } = options;
+
   // Normalize selectedOption
   const isLAN = selectedOption && selectedOption.toLowerCase() === 'lan';
 
@@ -33,12 +36,27 @@ export const controlDevice = async (
       });
 
       if (response.ok) {
+        let data = null;
+        try {
+          data = await response.json();
+        } catch {}
+        return { ok: true, status: response.status, data };
       } else {
-        Alert.alert('Error', 'LAN control failed. Please check device connection.');
+        let data = null;
+        try {
+          data = await response.json();
+        } catch {}
+        if (!suppressErrorAlert) {
+          Alert.alert('Error', 'LAN control failed. Please check device connection.');
+        }
+        return { ok: false, status: response.status, data };
       }
     } catch (error) {
       console.error('LAN error:', error);
-      Alert.alert('Error', 'Failed to control device locally.');
+      if (!suppressErrorAlert) {
+        Alert.alert('Error', 'Failed to control device locally.');
+      }
+      return { ok: false, status: null, error };
     }
   } else {
     const apiUrl = 'https://one-development.soniciot.com/control_devices/';
@@ -67,12 +85,27 @@ export const controlDevice = async (
       });
 
       if (response.ok) {
+        let data = null;
+        try {
+          data = await response.json();
+        } catch {}
+        return { ok: true, status: response.status, data };
       } else {
-        Alert.alert('Error', 'Something went wrong. Please try again.');
+        let data = null;
+        try {
+          data = await response.json();
+        } catch {}
+        if (!suppressErrorAlert) {
+          Alert.alert('Error', 'Something went wrong. Please try again.');
+        }
+        return { ok: false, status: response.status, data };
       }
     } catch (error) {
       console.error('Error controlling device:', error);
-      Alert.alert('Error', 'Failed to control the device. Please check your connection.');
+      if (!suppressErrorAlert) {
+        Alert.alert('Error', 'Failed to control the device. Please check your connection.');
+      }
+      return { ok: false, status: null, error };
     }
   }
 };
